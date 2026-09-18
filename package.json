@@ -24,6 +24,7 @@
     "@nestjs/common": "^12.0.3",
     "@nestjs/core": "^12.0.3",
     "@nestjs/platform-express": "^12.0.3",
+    "multer": "^2.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -37,6 +38,7 @@
     "@nestjs/testing": "^12.0.3",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^26.5.1",
     "@types/supertest": "^7.2.1",
     "cross-env": "^10.1.0",
@@ -65,9 +67,20 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "extensionsToTreatAsEsm": [".ts"],
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
     "transform": {
-      "^.+\\.(t|j)s$": ["ts-jest", { "useESM": true, "tsconfig": { "module": "ESNext", "moduleResolution": "bundler" } }]
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "useESM": true,
+          "tsconfig": {
+            "module": "ESNext",
+            "moduleResolution": "bundler"
+          }
+        }
+      ]
     },
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
