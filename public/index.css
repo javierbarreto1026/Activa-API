@@ -1,0 +1,71 @@
+/* index.css */
+@import url('dashboard.css'); /* Importamos el diseño base y colores para no repetir código */
+
+.upload-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+    max-width: 600px;
+    margin: 4rem auto;
+    padding: 2.5rem;
+}
+
+.upload-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.upload-header h2 {
+    color: var(--activa-black);
+    margin-bottom: 0.5rem;
+}
+
+.upload-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
+}
+
+.file-drop-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background-color: var(--bg-light);
+    transition: all 0.3s;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+}
+
+.file-drop-area:hover, .file-drop-area.dragover {
+    border-color: var(--activa-red);
+    background-color: #fdf2f3;
+}
+
+.file-drop-area p {
+    margin: 0;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.file-drop-area input[type="file"] {
+    display: none;
+}
+
+.btn-upload {
+    width: 100%;
+    padding: 0.85rem;
+    font-size: 1rem;
+}
