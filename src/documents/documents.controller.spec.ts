@@ -8,7 +8,7 @@ describe('DocumentsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DocumentsController],
-      providers: [DocumentsService], // <-- Aquí invitamos al servicio a la prueba
+      providers: [DocumentsService],
     }).compile();
 
     controller = module.get<DocumentsController>(DocumentsController);
