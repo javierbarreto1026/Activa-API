@@ -1,18 +1,16 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { DocumentsModule } from './documents/documents.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 @Module({
   imports: [
-    DocumentsModule,
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      // Usamos process.cwd() (Current Working Directory)
+      // que apunta a la raíz de tu proyecto donde ejecutaste 'npm run start'
+      rootPath: join(process.cwd(), 'public'),
     }),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
