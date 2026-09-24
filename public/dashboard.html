@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activa Uniformes | Repositorio</title>
+    <link rel="icon" type="image/png" href="https://clustermodanorte.cccucuta.org.co/wp-content/uploads/2021/08/activa-logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">ACTIVA UNIFORMES</div>
+        <div class="navbar-links">
+            <a href="index.html" class="nav-link">Subir Archivo</a>
+            <a href="dashboard.html" class="nav-link active">Ver Documentos</a>
+            <div class="user-profile">Usuario Actual</div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="tabs-container" id="departamentosTabs">
+            <div class="tab active" data-depto="todos">Todos los Archivos</div>
+            <div class="tab" data-depto="contabilidad">Contabilidad</div>
+            <div class="tab" data-depto="produccion">Producción</div>
+            <div class="tab" data-depto="rrhh">Recursos Humanos</div>
+        </div>
+
+        <div class="card">
+            <div class="toolbar">
+                <div class="filters-group">
+                    <span class="filters-label">Filtrar por fecha:</span>
+                    <select id="filtroAno"><option value="2026">2026</option></select>
+                    <select id="filtroMes"><option value="09">Septiembre</option></select>
+                </div>
+                <div class="filters-group">
+                    <input type="text" placeholder="Buscar por nombre..." id="searchInput" style="width: 250px;">
+                    <button class="btn-primary" onclick="aplicarFiltros()">Buscar</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Nombre del Archivo</th><th>Subido por</th><th>Fecha de Subida</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody id="tablaResultados">
+                        <tr><td><strong>factura_telas.pdf</strong></td><td>Carlos Pérez</td><td>21/09/2026</td><td><a href="#" class="action-link">Abrir en AWS</a></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination-container">
+                <div class="pagination-info" id="infoPaginacion">Mostrando 1 a 10 de 1,245 archivos</div>
+                <div class="pagination-buttons" id="botonesPaginacion">
+                    <button class="page-btn" disabled>Anterior</button>
+                    <button class="page-btn active num-page">1</button>
+                    <button class="page-btn num-page">2</button>
+                    <button class="page-btn">Siguiente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tbody = document.getElementById('tablaResultados');
+
+        const baseDeDatosFalsa = [
+            {id: 1, nombre: 'factura_telas_septiembre.pdf', autor:'Carlos Perez', fecha: '21/09/2026', depto:'contabilidad'},
+            {id: 2, nombre: 'balance_general_agosto.xlsx', autor:'Carlos Perez', fecha: '15/09/2026', depto: 'contabilidad'},
+            {id: 3, nombre: 'ficha_tecnica_chaqueta.jpg', autor: 'Ana Lopez', fecha: '10/09/2026', depto: 'produccion'},
+            {id: 4, nombre: 'manual_bordado_v2.pdf', autor:'Ana Lopez', fecha: '05/09/2026', depto:'produccion'},
+            {id: 5, nombre: 'contrato_nuevo_costurero.pdf', autor: 'Maria Gomez', fecha: '01/09/2026', depto: 'rrhh'},
+            {id: 6, nombre: 'pago_nomina_quincena.pdf', autor: 'Maria Gomez', fecha: '15/09/2026', depto: 'rrhh'}
+        ];
+
+        let deptoActual = 'todos';
+
+        function renderizarTabla(departamento, terminoBusqueda = ''){
+            let archivosFiltrados = baseDeDatosFalsa;
+
+            if (departamento !== 'todos') {
+                archivosFiltrados = archivosFiltrados.filter(archivo => archivo.depto === departamento);
+            }
+
+            if (terminoBusqueda){
+                archivosFiltrados = archivosFiltrados.filter(archivo => 
+                    archivo.nombre.toLocaleLowerCase().includes(terminoBusqueda.toLocaleLowerCase));
+            }
+
+            if (archivosFiltrados.length === 0){
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No se encontraron archivos en esta sección.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = archivosFiltrados.map(archivo => `
+                <tr>
+                    <td><strong>${archivo.nombre}</strong></td>
+                    <td>${archivo.autor}</td>
+                    <td>${archivo.fecha}</td>
+                    <td><a href="#" class="action-link">Abrir en AWS</a></td>
+                </tr>
+            `).join('');
+        }
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Cambiar el diseño de la pestaña activa
+                document.querySelector('.tab.active').classList.remove('active');
+                tab.classList.add('active');
+                
+                // Obtener el departamento de la pestaña clickeada
+                deptoActual = tab.getAttribute('data-depto');
+                
+                simularCargaAPI(`Buscando archivos de ${tab.innerText}...`);
+            });
+        });
+
+        function aplciarFiltros() {
+            const textoBusqueda = document.getElementById('searchInput').value;
+            simularCargaAPI('Aplicando filtros de busqueda...', textoBusqueda);
+        }
+
+
+        function simularCargaAPI(mensaje, terminoBusqueda = ''){
+            tbody.innerHTML = `<tr><td colspan="4"><div class="loading-state"> ${mensaje}</div></td></tr>`;
+
+            setTimeout(() => {
+                renderizarTabla(deptoActual, terminoBusqueda);
+            }, 500);
+        }
+
+        renderizarTabla('todos');
+    </script>
+</body>
+</html>

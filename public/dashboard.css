@@ -1,0 +1,98 @@
+/* dashboard.css */
+:root {
+    --activa-black: #111111;
+    --activa-red: #b71224;
+    --activa-red-hover: #910e1c;
+    --bg-light: #f4f6f8;
+    --text-main: #333333;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-light);
+    margin: 0;
+    color: var(--text-main);
+}
+
+.navbar {
+    background-color: var(--activa-black);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-bottom: 4px solid var(--activa-red);
+}
+
+.navbar-brand {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.nav-link {
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: white;
+}
+
+.user-profile { color: white; font-size: 0.9rem; font-weight: 500; margin-left: 20px; padding-left: 20px; border-left: 1px solid #333; }
+
+.container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+
+.tabs-container { display: flex; gap: 5px; margin-bottom: -1px; overflow-x: auto; }
+
+.tab {
+    padding: 1rem 1.5rem; background-color: #e9ecef; border: 1px solid var(--border-color);
+    border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
+    font-weight: 600; color: var(--text-muted); transition: all 0.2s ease;
+}
+
+.tab:hover { background-color: white; }
+.tab.active { background-color: white; color: var(--activa-red); border-top: 3px solid var(--activa-red); z-index: 10; }
+
+.card { background: white; border-radius: 0 8px 8px 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-color); overflow: hidden; }
+
+.toolbar { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background-color: #fafafa; flex-wrap: wrap; gap: 15px; }
+
+.filters-group { display: flex; gap: 10px; align-items: center; }
+.filters-label { font-weight: 600; color: var(--text-muted); font-size: 0.9rem; margin-right: 5px; }
+
+select, input { padding: 0.5rem 0.8rem; border-radius: 6px; border: 1px solid var(--border-color); font-family: inherit; font-size: 0.9rem; outline: none; }
+select:focus, input:focus { border-color: var(--activa-red); }
+
+.btn-primary { background-color: var(--activa-red); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
+.btn-primary:hover { background-color: var(--activa-red-hover); }
+
+.table-container { overflow-x: auto; min-height: 200px; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { background-color: white; color: var(--text-muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; padding: 1rem 1.5rem; border-bottom: 2px solid var(--border-color); }
+td { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.95rem; }
+tr:hover td { background-color: #fdf2f3; }
+
+.pagination-container { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; background-color: white; border-top: 1px solid var(--border-color); }
+.pagination-info { color: var(--text-muted); font-size: 0.9rem; }
+.pagination-buttons { display: flex; gap: 5px; }
+.page-btn { padding: 0.5rem 0.8rem; border: 1px solid var(--border-color); background: white; color: var(--text-main); border-radius: 4px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+.page-btn:hover:not(:disabled) { background-color: #f3f4f6; }
+.page-btn.active { background-color: var(--activa-red); color: white; border-color: var(--activa-red); }
+.page-btn:disabled { background-color: #f9fafb; color: #d1d5db; cursor: not-allowed; }
+
+.action-link { color: var(--activa-red); text-decoration: none; font-weight: 600; }
+.action-link:hover { text-decoration: underline; }
+.loading-state { text-align: center; padding: 3rem; color: var(--text-muted); font-weight: 500; }
