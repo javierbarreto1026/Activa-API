@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
     ServeStaticModule.forRoot({
-      // Usamos process.cwd() (Current Working Directory)
-      // que apunta a la raíz de tu proyecto donde ejecutaste 'npm run start'
       rootPath: join(process.cwd(), 'public'),
     }),
   ],
-  controllers: [],
+  // ¡Aquí estaba el problema! Volvemos a registrar el controlador
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
