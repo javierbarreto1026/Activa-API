@@ -3,135 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activa Uniformes | Repositorio</title>
-    <link rel="icon" type="image/png" href="https://clustermodanorte.cccucuta.org.co/wp-content/uploads/2021/08/activa-logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Dashboard - Activa Uniformes</title>
+    <!-- Tu archivo CSS original de estilos -->
     <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
 
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
     <nav class="navbar">
-        <div class="navbar-brand">ACTIVA UNIFORMES</div>
-        <div class="navbar-links">
-            <a href="index.html" class="nav-link">Subir Archivo</a>
-            <a href="dashboard.html" class="nav-link active">Ver Documentos</a>
-            <div class="user-profile">Usuario Actual</div>
+        <div class="brand">ACTIVA UNIFORMES</div>
+        <div class="nav-links">
+            <a href="#" id="btnSubirArchivo">Subir Archivo</a>
+            <a href="#" id="btnVerDocumentos">Ver Documentos</a>
+            
+            <!-- SECCIÓN DINÁMICA DEL USUARIO -->
+            <div class="user-section" style="display: flex; align-items: center; gap: 15px;">
+                <span id="userNameDisplay" style="font-weight: 600; color: white;">Cargando...</span>
+                <button class="btn-logout" onclick="cerrarSesion()" style="background: transparent; border: 1px solid #C8102E; color: #C8102E; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    Cerrar sesión
+                </button>
+            </div>
         </div>
     </nav>
 
+    <!-- CONTENEDOR PRINCIPAL DEL DASHBOARD -->
     <div class="container">
-        <div class="tabs-container" id="departamentosTabs">
-            <div class="tab active" data-depto="todos">Todos los Archivos</div>
-            <div class="tab" data-depto="contabilidad">Contabilidad</div>
-            <div class="tab" data-depto="produccion">Producción</div>
-            <div class="tab" data-depto="rrhh">Recursos Humanos</div>
-        </div>
+        <div class="dashboard-card">
+            
+            <!-- Pestañas de Categorías (Restauradas a estructura de lista que suele usar CSS) -->
+            <ul class="tabs" style="list-style: none; display: flex; padding: 0; margin: 0; border-bottom: 1px solid #e0e0e0;">
+                <li class="tab active" onclick="cambiarPestana(this)">Todos los Archivos</li>
+                <li class="tab" onclick="cambiarPestana(this)">Contabilidad</li>
+                <li class="tab" onclick="cambiarPestana(this)">Producción</li>
+                <li class="tab" onclick="cambiarPestana(this)">Recursos Humanos</li>
+            </ul>
 
-        <div class="card">
-            <div class="toolbar">
-                <div class="filters-group">
-                    <span class="filters-label">Filtrar por fecha:</span>
-                    <select id="filtroAno"><option value="2026">2026</option></select>
-                    <select id="filtroMes"><option value="09">Septiembre</option></select>
+            <!-- Filtros y Buscador -->
+            <div class="toolbar" style="display: flex; justify-content: space-between; padding: 1.5rem; align-items: center;">
+                <div class="filter-group">
+                    <span>Filtrar por fecha:</span>
+                    <select><option>2026</option></select>
+                    <select><option>Septiembre</option></select>
                 </div>
-                <div class="filters-group">
-                    <input type="text" placeholder="Buscar por nombre..." id="searchInput" style="width: 250px;">
-                    <button class="btn-primary" onclick="aplicarFiltros()">Buscar</button>
+                <div class="search-group">
+                    <input type="text" placeholder="Buscar por nombre..." style="padding: 6px; width: 250px;">
+                    <button class="btn-search" style="padding: 6px 15px; background: #C8102E; color: white; border: none; cursor: pointer;">Buscar</button>
                 </div>
             </div>
 
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr><th>Nombre del Archivo</th><th>Subido por</th><th>Fecha de Subida</th><th>Acciones</th></tr>
-                    </thead>
-                    <tbody id="tablaResultados">
-                        <tr><td><strong>factura_telas.pdf</strong></td><td>Carlos Pérez</td><td>21/09/2026</td><td><a href="#" class="action-link">Abrir en AWS</a></td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <!-- Tabla de Datos -->
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #e0e0e0; text-align: left;">
+                        <th style="padding: 1rem;">NOMBRE DEL ARCHIVO</th>
+                        <th style="padding: 1rem;">SUBIDO POR</th>
+                        <th style="padding: 1rem;">FECHA DE SUBIDA</th>
+                        <th style="padding: 1rem;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 1rem;"><strong>factura_telas_septiembre.pdf</strong></td>
+                        <td style="padding: 1rem;">Carlos Perez</td>
+                        <td style="padding: 1rem;">21/09/2026</td>
+                        <td style="padding: 1rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 1rem;"><strong>balance_general_agosto.xlsx</strong></td>
+                        <td style="padding: 1rem;">Carlos Perez</td>
+                        <td style="padding: 1rem;">15/09/2026</td>
+                        <td style="padding: 1rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 1rem;"><strong>ficha_tecnica_chaqueta.jpg</strong></td>
+                        <td style="padding: 1rem;">Ana Lopez</td>
+                        <td style="padding: 1rem;">10/09/2026</td>
+                        <td style="padding: 1rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
+                    </tr>
+                </tbody>
+            </table>
 
-            <div class="pagination-container">
-                <div class="pagination-info" id="infoPaginacion">Mostrando 1 a 10 de 1,245 archivos</div>
-                <div class="pagination-buttons" id="botonesPaginacion">
-                    <button class="page-btn" disabled>Anterior</button>
-                    <button class="page-btn active num-page">1</button>
-                    <button class="page-btn num-page">2</button>
-                    <button class="page-btn">Siguiente</button>
+            <!-- Controles de Paginación -->
+            <div class="pagination-footer" style="display: flex; justify-content: space-between; padding: 1.5rem;">
+                <div>Mostrando 1 a 3 de 1,245 archivos</div>
+                <div class="pagination-controls">
+                    <button disabled>Anterior</button>
+                    <button style="background: #C8102E; color: white;">1</button>
+                    <button>2</button>
+                    <button>Siguiente</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SCRIPT MULTIFUNCIÓN (Sesión + Interactividad) -->
     <script>
-        const tbody = document.getElementById('tablaResultados');
-
-        const baseDeDatosFalsa = [
-            {id: 1, nombre: 'factura_telas_septiembre.pdf', autor:'Carlos Perez', fecha: '21/09/2026', depto:'contabilidad'},
-            {id: 2, nombre: 'balance_general_agosto.xlsx', autor:'Carlos Perez', fecha: '15/09/2026', depto: 'contabilidad'},
-            {id: 3, nombre: 'ficha_tecnica_chaqueta.jpg', autor: 'Ana Lopez', fecha: '10/09/2026', depto: 'produccion'},
-            {id: 4, nombre: 'manual_bordado_v2.pdf', autor:'Ana Lopez', fecha: '05/09/2026', depto:'produccion'},
-            {id: 5, nombre: 'contrato_nuevo_costurero.pdf', autor: 'Maria Gomez', fecha: '01/09/2026', depto: 'rrhh'},
-            {id: 6, nombre: 'pago_nomina_quincena.pdf', autor: 'Maria Gomez', fecha: '15/09/2026', depto: 'rrhh'}
-        ];
-
-        let deptoActual = 'todos';
-
-        function renderizarTabla(departamento, terminoBusqueda = ''){
-            let archivosFiltrados = baseDeDatosFalsa;
-
-            if (departamento !== 'todos') {
-                archivosFiltrados = archivosFiltrados.filter(archivo => archivo.depto === departamento);
+        // --- 1. SEGURIDAD Y SESIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const usuarioGuardado = localStorage.getItem('usuarioActiva');
+            
+            if (!usuarioGuardado) {
+                // Bloquea el acceso sin login
+                window.location.href = 'login.html';
+            } else {
+                // Inyecta el nombre
+                const userDisplay = document.getElementById('userNameDisplay');
+                if(userDisplay) userDisplay.innerText = usuarioGuardado;
             }
-
-            if (terminoBusqueda){
-                archivosFiltrados = archivosFiltrados.filter(archivo => 
-                    archivo.nombre.toLocaleLowerCase().includes(terminoBusqueda.toLocaleLowerCase));
-            }
-
-            if (archivosFiltrados.length === 0){
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No se encontraron archivos en esta sección.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = archivosFiltrados.map(archivo => `
-                <tr>
-                    <td><strong>${archivo.nombre}</strong></td>
-                    <td>${archivo.autor}</td>
-                    <td>${archivo.fecha}</td>
-                    <td><a href="#" class="action-link">Abrir en AWS</a></td>
-                </tr>
-            `).join('');
-        }
-
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                // Cambiar el diseño de la pestaña activa
-                document.querySelector('.tab.active').classList.remove('active');
-                tab.classList.add('active');
-                
-                // Obtener el departamento de la pestaña clickeada
-                deptoActual = tab.getAttribute('data-depto');
-                
-                simularCargaAPI(`Buscando archivos de ${tab.innerText}...`);
-            });
         });
 
-        function aplciarFiltros() {
-            const textoBusqueda = document.getElementById('searchInput').value;
-            simularCargaAPI('Aplicando filtros de busqueda...', textoBusqueda);
+        function cerrarSesion() {
+            localStorage.removeItem('usuarioActiva');
+            window.location.href = 'login.html';
         }
 
-
-        function simularCargaAPI(mensaje, terminoBusqueda = ''){
-            tbody.innerHTML = `<tr><td colspan="4"><div class="loading-state"> ${mensaje}</div></td></tr>`;
-
-            setTimeout(() => {
-                renderizarTabla(deptoActual, terminoBusqueda);
-            }, 500);
+        // --- 2. INTERACTIVIDAD DE INTERFAZ ---
+        // Hacer que las pestañas cambien de color al hacer clic
+        function cambiarPestana(elementoClickeado) {
+            // Quitamos la clase 'active' de todas
+            const pestanas = document.querySelectorAll('.tab');
+            pestanas.forEach(p => p.classList.remove('active'));
+            
+            // Se la ponemos solo a la que el usuario le dio clic
+            elementoClickeado.classList.add('active');
         }
 
-        renderizarTabla('todos');
+        // Evento para el botón de subir archivos
+        const btnSubir = document.getElementById('btnSubirArchivo');
+        if (btnSubir) {
+            btnSubir.addEventListener('click', function(event) {
+                event.preventDefault(); // Evita que la página recargue
+                alert("La conexión con AWS S3 será el siguiente paso del proyecto.");
+            });
+        }
     </script>
 </body>
 </html>
