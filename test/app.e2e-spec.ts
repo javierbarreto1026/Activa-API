@@ -7,9 +7,6 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
-    // Aumentamos el tiempo de espera a 10 segundos por seguridad
-    jest.setTimeout(10000);
-
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
