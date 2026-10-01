@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Redirect, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from './usuarios/usuario.entity';
@@ -15,6 +15,11 @@ export class AppController {
     @InjectRepository(Usuario)
     private usuarioRepository: Repository<Usuario>,
   ) {}
+
+  @Get()
+  raiz() {
+    return { url: '/login.html' };
+  }
 
   @Get('api/documentos')
   obtenerDocumentos() {
@@ -63,8 +68,6 @@ export class AppController {
       },
     ];
   }
-  @Redirect('/login.html', 302)
-  raiz() {}
 
   @Post('api/login')
   // Agregamos 'async' porque consultar a la base de datos toma tiempo
