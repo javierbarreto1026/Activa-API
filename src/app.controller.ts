@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UnauthorizedException, Redirect } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from './usuarios/usuario.entity';
@@ -17,9 +17,8 @@ export class AppController {
   ) {}
 
   @Get()
-  raiz() {
-    return { url: '/login.html' };
-  }
+  @Redirect('/login.html', 302)
+  raiz() {}
 
   @Get('api/documentos')
   obtenerDocumentos() {
