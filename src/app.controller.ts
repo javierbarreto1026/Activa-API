@@ -16,7 +16,53 @@ export class AppController {
     private usuarioRepository: Repository<Usuario>,
   ) {}
 
-  @Get()
+  @Get('api/documentos')
+  obtenerDocumentos() {
+    return [
+      {
+        id: 1,
+        nombre: 'factura_telas_septiembre.pdf',
+        subidoPor: 'Carlos Perez',
+        fecha: '21/09/2026',
+        departamento: 'Contabilidad',
+      },
+      {
+        id: 2,
+        nombre: 'balance_general_agosto.xlsx',
+        subidoPor: 'Carlos Perez',
+        fecha: '15/09/2026',
+        departamento: 'Contabilidad',
+      },
+      {
+        id: 3,
+        nombre: 'ficha_tecnica_chaqueta.jpg',
+        subidoPor: 'Ana Lopez',
+        fecha: '10/09/2026',
+        departamento: 'Producción',
+      },
+      {
+        id: 4,
+        nombre: 'manual_bordado_v2.pdf',
+        subidoPor: 'Ana Lopez',
+        fecha: '05/09/2026',
+        departamento: 'Producción',
+      },
+      {
+        id: 5,
+        nombre: 'contrato_nuevo_costurero.pdf',
+        subidoPor: 'Maria Gomez',
+        fecha: '01/09/2026',
+        departamento: 'Recursos Humanos',
+      },
+      {
+        id: 6,
+        nombre: 'pago_nomina_quincena.pdf',
+        subidoPor: 'Maria Gomez',
+        fecha: '15/09/2026',
+        departamento: 'Recursos Humanos',
+      },
+    ];
+  }
   @Redirect('/login.html', 302)
   raiz() {}
 

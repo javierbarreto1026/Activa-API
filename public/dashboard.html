@@ -4,137 +4,218 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Activa Uniformes</title>
-    <!-- Tu archivo CSS original de estilos -->
+    <!-- Tu hoja de estilos externa -->
     <link rel="stylesheet" href="dashboard.css">
+    <style>
+        /* Ajuste limpio y profesional para la barra superior alineada */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            height: 70px;
+            background-color: #121212;
+            border-bottom: 4px solid #C8102E;
+            color: white;
+        }
+        .navbar .brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+        .nav-right-container {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+        .nav-links-custom {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-links-custom a {
+            color: #ccc;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+        .nav-links-custom a:hover {
+            color: white;
+        }
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 1px solid #444;
+            padding-left: 20px;
+        }
+        .btn-logout-custom {
+            background: transparent;
+            border: 1px solid #C8102E;
+            color: #C8102E;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: 0.3s;
+        }
+        .btn-logout-custom:hover {
+            background: #C8102E;
+            color: white;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR CORREGIDA -->
     <nav class="navbar">
         <div class="brand">ACTIVA UNIFORMES</div>
-        <div class="nav-links">
-            <a href="#" id="btnSubirArchivo">Subir Archivo</a>
-            <a href="#" id="btnVerDocumentos">Ver Documentos</a>
+        <div class="nav-right-container">
+            <div class="nav-links-custom">
+                <a href="#" id="btnSubirArchivo">Subir Archivo</a>
+                <a href="#" id="btnVerDocumentos">Ver Documentos</a>
+            </div>
             
-            <!-- SECCIÓN DINÁMICA DEL USUARIO -->
-            <div class="user-section" style="display: flex; align-items: center; gap: 15px;">
+            <!-- SECCIÓN DEL USUARIO Y LOGOUT -->
+            <div class="user-pill">
                 <span id="userNameDisplay" style="font-weight: 600; color: white;">Cargando...</span>
-                <button class="btn-logout" onclick="cerrarSesion()" style="background: transparent; border: 1px solid #C8102E; color: #C8102E; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                    Cerrar sesión
-                </button>
+                <button class="btn-logout-custom" onclick="cerrarSesion()">Cerrar sesión</button>
             </div>
         </div>
     </nav>
 
     <!-- CONTENEDOR PRINCIPAL DEL DASHBOARD -->
-    <div class="container">
-        <div class="dashboard-card">
+    <div class="container" style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+        <div class="dashboard-card" style="background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden;">
             
-            <!-- Pestañas de Categorías (Restauradas a estructura de lista que suele usar CSS) -->
-            <ul class="tabs" style="list-style: none; display: flex; padding: 0; margin: 0; border-bottom: 1px solid #e0e0e0;">
-                <li class="tab active" onclick="cambiarPestana(this)">Todos los Archivos</li>
-                <li class="tab" onclick="cambiarPestana(this)">Contabilidad</li>
-                <li class="tab" onclick="cambiarPestana(this)">Producción</li>
-                <li class="tab" onclick="cambiarPestana(this)">Recursos Humanos</li>
+            <!-- Pestañas de Categorías -->
+            <ul class="tabs" style="list-style: none; display: flex; padding: 0; margin: 0; background-color: #f9f9f9; border-bottom: 1px solid #e0e0e0;">
+                <li class="tab active" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Todos los Archivos</li>
+                <li class="tab" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Contabilidad</li>
+                <li class="tab" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Producción</li>
+                <li class="tab" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Recursos Humanos</li>
             </ul>
 
             <!-- Filtros y Buscador -->
             <div class="toolbar" style="display: flex; justify-content: space-between; padding: 1.5rem; align-items: center;">
-                <div class="filter-group">
+                <div class="filter-group" style="display: flex; align-items: center; gap: 10px; color: #666; font-size: 0.9rem;">
                     <span>Filtrar por fecha:</span>
-                    <select><option>2026</option></select>
-                    <select><option>Septiembre</option></select>
+                    <select style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;"><option>2026</option></select>
+                    <select style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;"><option>Septiembre</option></select>
                 </div>
-                <div class="search-group">
-                    <input type="text" placeholder="Buscar por nombre..." style="padding: 6px; width: 250px;">
-                    <button class="btn-search" style="padding: 6px 15px; background: #C8102E; color: white; border: none; cursor: pointer;">Buscar</button>
+                <div class="search-group" style="display: flex; gap: 10px;">
+                    <input type="text" placeholder="Buscar por nombre..." style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; width: 250px;">
+                    <button class="btn-search" style="background: #C8102E; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: 600;">Buscar</button>
                 </div>
             </div>
 
-            <!-- Tabla de Datos -->
+            <!-- Tabla de Datos Dinámica -->
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr style="border-bottom: 1px solid #e0e0e0; text-align: left;">
-                        <th style="padding: 1rem;">NOMBRE DEL ARCHIVO</th>
-                        <th style="padding: 1rem;">SUBIDO POR</th>
-                        <th style="padding: 1rem;">FECHA DE SUBIDA</th>
-                        <th style="padding: 1rem;">ACCIONES</th>
+                    <tr style="border-bottom: 1px solid #e0e0e0; text-align: left; color: #666; font-size: 0.85rem;">
+                        <th style="padding: 1rem 1.5rem;">NOMBRE DEL ARCHIVO</th>
+                        <th style="padding: 1rem 1.5rem;">SUBIDO POR</th>
+                        <th style="padding: 1rem 1.5rem;">FECHA DE SUBIDA</th>
+                        <th style="padding: 1rem 1.5rem;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 1rem;"><strong>factura_telas_septiembre.pdf</strong></td>
-                        <td style="padding: 1rem;">Carlos Perez</td>
-                        <td style="padding: 1rem;">21/09/2026</td>
-                        <td style="padding: 1rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 1rem;"><strong>balance_general_agosto.xlsx</strong></td>
-                        <td style="padding: 1rem;">Carlos Perez</td>
-                        <td style="padding: 1rem;">15/09/2026</td>
-                        <td style="padding: 1rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 1rem;"><strong>ficha_tecnica_chaqueta.jpg</strong></td>
-                        <td style="padding: 1rem;">Ana Lopez</td>
-                        <td style="padding: 1rem;">10/09/2026</td>
-                        <td style="padding: 1rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
-                    </tr>
+                    <!-- Los datos se cargan dinámicamente aquí -->
                 </tbody>
             </table>
 
             <!-- Controles de Paginación -->
-            <div class="pagination-footer" style="display: flex; justify-content: space-between; padding: 1.5rem;">
-                <div>Mostrando 1 a 3 de 1,245 archivos</div>
-                <div class="pagination-controls">
-                    <button disabled>Anterior</button>
-                    <button style="background: #C8102E; color: white;">1</button>
-                    <button>2</button>
-                    <button>Siguiente</button>
+            <div class="pagination-footer" style="display: flex; justify-content: space-between; padding: 1.5rem; align-items: center; color: #666; font-size: 0.9rem;">
+                <div id="contadorArchivos">Mostrando archivos del sistema</div>
+                <div class="pagination-controls" style="display: flex; gap: 5px;">
+                    <button class="page-btn" disabled style="padding: 6px 12px; border: 1px solid #e0e0e0; background: white; border-radius: 4px; cursor: not-allowed;">Anterior</button>
+                    <button class="page-btn active" style="padding: 6px 12px; border: 1px solid #C8102E; background: #C8102E; color: white; border-radius: 4px;">1</button>
+                    <button class="page-btn" style="padding: 6px 12px; border: 1px solid #e0e0e0; background: white; border-radius: 4px;">Siguiente</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT MULTIFUNCIÓN (Sesión + Interactividad) -->
+    <!-- SCRIPT DE SESIÓN Y FILTRADO POR ÁREAS -->
     <script>
-        // --- 1. SEGURIDAD Y SESIÓN ---
-        document.addEventListener('DOMContentLoaded', () => {
+        let todosLosArchivos = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Verificación de Seguridad de Sesión
             const usuarioGuardado = localStorage.getItem('usuarioActiva');
-            
             if (!usuarioGuardado) {
-                // Bloquea el acceso sin login
                 window.location.href = 'login.html';
             } else {
-                // Inyecta el nombre
                 const userDisplay = document.getElementById('userNameDisplay');
                 if(userDisplay) userDisplay.innerText = usuarioGuardado;
             }
+
+            // 2. Cargar datos reales y renderizar la tabla por defecto
+            await cargarArchivos('Todos los Archivos');
         });
+
+        async function cargarArchivos(categoriaFiltro) {
+            try {
+                const response = await fetch('/api/documentos');
+                todosLosArchivos = await response.json();
+                renderizarTabla(categoriaFiltro);
+            } catch (error) {
+                console.error('Error al conectar con la API de documentos:', error);
+            }
+        }
+
+        function renderizarTabla(filtro) {
+            const tbody = document.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            // Lógica de filtrado inteligente por área
+            const archivosFiltrados = filtro === 'Todos los Archivos' 
+                ? todosLosArchivos 
+                : todosLosArchivos.filter(doc => doc.departamento === filtro);
+
+            if (archivosFiltrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2.5rem; color: #666;">No hay documentos registrados en esta categoría.</td></tr>`;
+                document.getElementById('contadorArchivos').innerText = `Mostrando 0 de ${todosLosArchivos.length} archivos`;
+                return;
+            }
+
+            archivosFiltrados.forEach(doc => {
+                const fila = `
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 1rem 1.5rem; font-weight: 600; color: #333;">${doc.nombre}</td>
+                        <td style="padding: 1rem 1.5rem; color: #555;">${doc.subidoPor}</td>
+                        <td style="padding: 1rem 1.5rem; color: #555;">${doc.fecha}</td>
+                        <td style="padding: 1rem 1.5rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
+                    </tr>
+                `;
+                tbody.innerHTML += fila;
+            });
+
+            document.getElementById('contadorArchivos').innerText = `Mostrando ${archivosFiltrados.length} de ${todosLosArchivos.length} archivos`;
+        }
+
+        // Cambio visual de pestañas y filtrado en tiempo real
+        function cambiarPestana(elementoClickeado) {
+            const pestanas = document.querySelectorAll('.tab');
+            pestanas.forEach(p => {
+                p.classList.remove('active');
+                p.style.background = 'transparent';
+                p.style.color = '#666';
+                p.style.borderTop = 'none';
+            });
+
+            elementoClickeado.classList.add('active');
+            elementoClickeado.style.background = 'white';
+            elementoClickeado.style.color = '#C8102E';
+            elementoClickeado.style.borderTop = '3px solid #C8102E';
+
+            const categoriaSeleccionada = elementoClickeado.innerText.trim();
+            renderizarTabla(categoriaSeleccionada);
+        }
 
         function cerrarSesion() {
             localStorage.removeItem('usuarioActiva');
             window.location.href = 'login.html';
-        }
-
-        // --- 2. INTERACTIVIDAD DE INTERFAZ ---
-        // Hacer que las pestañas cambien de color al hacer clic
-        function cambiarPestana(elementoClickeado) {
-            // Quitamos la clase 'active' de todas
-            const pestanas = document.querySelectorAll('.tab');
-            pestanas.forEach(p => p.classList.remove('active'));
-            
-            // Se la ponemos solo a la que el usuario le dio clic
-            elementoClickeado.classList.add('active');
-        }
-
-        // Evento para el botón de subir archivos
-        const btnSubir = document.getElementById('btnSubirArchivo');
-        if (btnSubir) {
-            btnSubir.addEventListener('click', function(event) {
-                event.preventDefault(); // Evita que la página recargue
-                alert("La conexión con AWS S3 será el siguiente paso del proyecto.");
-            });
         }
     </script>
 </body>
