@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AppController } from './../src/app.controller';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Usuario } from './../src/usuarios/usuario.entity';
+import { jest } from '@jest/globals';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -15,7 +16,7 @@ describe('AppController (e2e)', () => {
         {
           provide: getRepositoryToken(Usuario),
           useValue: {
-            findOne: jest.fn().mockResolvedValue(null),
+            findOne: jest.fn().mockImplementation(() => Promise.resolve(null)),
           },
         },
       ],
