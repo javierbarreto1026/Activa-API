@@ -6,19 +6,30 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
-
+import { Request as ExpressRequest } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
 import { diskStorage } from 'multer';
 import { extname } from 'node:path';
+import { JwtAuthGuard } from '../usuarios/jwt-auth.guard';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    id: number;
+    correo: string;
+    rol: string;
+  };
+}
 
 @Controller('documents')
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
-  //POST https://localhost:3000/documents/upload
-
+  // POST http://localhost:3000/documents/upload
+  @UseGuards(JwtAuthGuard)
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -32,23 +43,27 @@ export class DocumentsController {
       }),
     }),
   )
-  uploadDocument(@UploadedFile() file: Express.Multer.File) {
-    return this.documentsService.uploadToCloud(file);
+  uploadDocument(@UploadedFile() file: Express.Multer.File, @Request() req: AuthenticatedRequest) {
+    const userId = req.user.id;
+    return this.documentsService.guardarDocumento(file, userId);
   }
 
   // GET: http://localhost:3000/documents
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.documentsService.findAll();
   }
 
   // GET: http://localhost:3000/documents/1
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.documentsService.findOne(id);
   }
 
   // DELETE: http://localhost:3000/documents/1
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.documentsService.remove(id);
