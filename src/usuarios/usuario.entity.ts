@@ -14,6 +14,9 @@ export class Usuario {
   @Column({ type: 'varchar', length: 255 })
   contrasena!: string;
 
+  @Column({ default: 'USUARIO ' })
+  rol!: string;
+
   @Column({ type: 'varchar', length: 50 })
   departamento!: string;
 

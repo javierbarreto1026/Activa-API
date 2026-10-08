@@ -1,19 +1,25 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from './usuario.entity';
 import { CreateUsuarioDto } from './create-usuario.dto';
 import { LoginUsuarioDto } from './login-usuario.dto';
 import * as bcrypt from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UsuariosService {
   constructor(
     @InjectRepository(Usuario)
     private usuarioRepository: Repository<Usuario>,
+    private jwtService: JwtService,
   ) {}
 
-  // --- MÉTODO 1: REGISTRO ---
   async crearUsuario(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
     const { correo, contrasena, nombre } = createUsuarioDto;
 
@@ -34,7 +40,6 @@ export class UsuariosService {
     return this.usuarioRepository.save(nuevoUsuario);
   }
 
-  // --- MÉTODO 2: LOGIN (Este va justo debajo del anterior, antes de la última llave) ---
   async validarUsuario(loginUsuarioDto: LoginUsuarioDto) {
     const { correo, contrasena } = loginUsuarioDto;
 
@@ -48,10 +53,28 @@ export class UsuariosService {
       throw new UnauthorizedException('Correo o contraseña incorrectos');
     }
 
+    const payload = { sub: usuario.id, correo: usuario.correo };
+
+    const tokenGenerado = this.jwtService.sign(payload);
+
     return {
       id: usuario.id,
       nombre: usuario.nombre,
       correo: usuario.correo,
+      token: tokenGenerado,
     };
   }
-} // <-- Esta es la llave final que cierra la clase
+
+  async findAll() {
+    return await this.usuarioRepository.find();
+  }
+
+  // 2. Buscar un usuario por su ID
+  async findOne(id: number) {
+    const usuario = await this.usuarioRepository.findOne({ where: { id } });
+    if (!usuario) {
+      throw new NotFoundException(`El usuario con ID ${id} no fue encontrado`);
+    }
+    return usuario;
+  }
+}

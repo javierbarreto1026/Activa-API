@@ -1,13 +1,24 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { UsuariosController } from './usuarios.controller';
 import { UsuariosService } from './usuarios.service';
 import { Usuario } from './usuario.entity';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
-  // forFeature le dice a TypeORM qué tablas usaremos en este módulo específico
-  imports: [TypeOrmModule.forFeature([Usuario])],
-  controllers: [UsuariosController], // Aquí registramos tu nueva ruta
-  providers: [UsuariosService], // Aquí registramos la lógica
+  imports: [
+    TypeOrmModule.forFeature([Usuario]),
+
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.register({
+      secret: 'MI_CLAVE_SECRETA_SENA',
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
+  controllers: [UsuariosController],
+
+  providers: [UsuariosService, JwtStrategy],
 })
 export class UsuariosModule {}
