@@ -3,220 +3,602 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Activa Uniformes</title>
-    <!-- Tu hoja de estilos externa -->
+    <title>Documentos | Activa Uniformes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="dashboard.css">
-    <style>
-        /* Ajuste limpio y profesional para la barra superior alineada */
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-            height: 70px;
-            background-color: #121212;
-            border-bottom: 4px solid #C8102E;
-            color: white;
-        }
-        .navbar .brand {
-            font-size: 1.2rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-        .nav-right-container {
-            display: flex;
-            align-items: center;
-            gap: 25px;
-        }
-        .nav-links-custom {
-            display: flex;
-            gap: 20px;
-        }
-        .nav-links-custom a {
-            color: #ccc;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: 0.3s;
-        }
-        .nav-links-custom a:hover {
-            color: white;
-        }
-        .user-pill {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-left: 1px solid #444;
-            padding-left: 20px;
-        }
-        .btn-logout-custom {
-            background: transparent;
-            border: 1px solid #C8102E;
-            color: #C8102E;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: 0.3s;
-        }
-        .btn-logout-custom:hover {
-            background: #C8102E;
-            color: white;
-        }
-    </style>
 </head>
 <body>
+    <header>
+        <nav class="navbar" aria-label="Principal">
+            <a class="brand" href="dashboard.html" aria-label="Activa Uniformes, inicio">
+                <span class="brand-mark" aria-hidden="true">A</span>
+                <span class="brand-text"><strong>ACTIVA</strong><span>UNIFORMES</span></span>
+            </a>
 
-    <!-- BARRA DE NAVEGACIÓN SUPERIOR CORREGIDA -->
-    <nav class="navbar">
-        <div class="brand">ACTIVA UNIFORMES</div>
-        <div class="nav-right-container">
-            <div class="nav-links-custom">
-                <a href="#" id="btnSubirArchivo">Subir Archivo</a>
-                <a href="#" id="btnVerDocumentos">Ver Documentos</a>
+            <div class="nav-right">
+                <div class="nav-links">
+                    <button type="button" class="nav-link" id="btnSubirArchivo">Subir archivo</button>
+                    <button type="button" class="nav-link" id="btnVerDocumentos">Ver documentos</button>
+                </div>
+
+                <div class="user-chip">
+                    <div class="avatar" id="userAvatar" aria-hidden="true">?</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNameDisplay">Cargando…</span>
+                        <span class="user-role" id="userRoleDisplay"></span>
+                    </div>
+                    <button type="button" class="btn-logout" id="btnCerrarSesion">Cerrar sesión</button>
+                </div>
             </div>
-            
-            <!-- SECCIÓN DEL USUARIO Y LOGOUT -->
-            <div class="user-pill">
-                <span id="userNameDisplay" style="font-weight: 600; color: white;">Cargando...</span>
-                <button class="btn-logout-custom" onclick="cerrarSesion()">Cerrar sesión</button>
+        </nav>
+        <div class="seam" aria-hidden="true"></div>
+    </header>
+
+    <main class="container">
+
+        <div class="page-head">
+            <div>
+                <h1 id="saludo">Documentos</h1>
+                <p>Consulta, busca y sube los archivos de cada área de la empresa.</p>
             </div>
+            <button type="button" class="btn-primary" id="btnSubirArchivo2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+                Subir archivo
+            </button>
         </div>
-    </nav>
 
-    <!-- CONTENEDOR PRINCIPAL DEL DASHBOARD -->
-    <div class="container" style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
-        <div class="dashboard-card" style="background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden;">
-            
-            <!-- Pestañas de Categorías -->
-            <ul class="tabs" style="list-style: none; display: flex; padding: 0; margin: 0; background-color: #f9f9f9; border-bottom: 1px solid #e0e0e0;">
-                <li class="tab active" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Todos los Archivos</li>
-                <li class="tab" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Contabilidad</li>
-                <li class="tab" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Producción</li>
-                <li class="tab" onclick="cambiarPestana(this)" style="padding: 1rem 2rem; font-weight: 600; cursor: pointer; color: #666;">Recursos Humanos</li>
-            </ul>
+        <section class="summary" aria-label="Resumen" id="resumen">
+            <div class="summary-item">
+                <div class="summary-label">Documentos en total</div>
+                <div class="summary-value" id="statTotal">–</div>
+                <div class="summary-sub" id="statTotalSub">&nbsp;</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Subidos en los últimos 30 días</div>
+                <div class="summary-value" id="statReciente">–</div>
+                <div class="summary-sub">&nbsp;</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Área con más archivos</div>
+                <div class="summary-value is-text" id="statArea">–</div>
+                <div class="summary-sub" id="statAreaSub">&nbsp;</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Último archivo subido</div>
+                <div class="summary-value is-text" id="statUltimo" title="">–</div>
+                <div class="summary-sub" id="statUltimoSub">&nbsp;</div>
+            </div>
+        </section>
 
-            <!-- Filtros y Buscador -->
-            <div class="toolbar" style="display: flex; justify-content: space-between; padding: 1.5rem; align-items: center;">
-                <div class="filter-group" style="display: flex; align-items: center; gap: 10px; color: #666; font-size: 0.9rem;">
-                    <span>Filtrar por fecha:</span>
-                    <select style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;"><option>2026</option></select>
-                    <select style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;"><option>Septiembre</option></select>
+        <section class="panel" id="panel" aria-label="Lista de documentos">
+
+            <div class="tabs" role="tablist" id="tabs" aria-label="Áreas"></div>
+
+            <div class="toolbar">
+                <div class="filters">
+                    <span class="filters-label">Fecha de subida</span>
+                    <label class="sr-only" for="filtroAnio">Año</label>
+                    <select id="filtroAnio"><option value="">Todos los años</option></select>
+                    <label class="sr-only" for="filtroMes">Mes</label>
+                    <select id="filtroMes"><option value="">Todos los meses</option></select>
+                    <button type="button" class="btn-ghost" id="btnLimpiar" hidden>Quitar filtros</button>
                 </div>
-                <div class="search-group" style="display: flex; gap: 10px;">
-                    <input type="text" placeholder="Buscar por nombre..." style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; width: 250px;">
-                    <button class="btn-search" style="background: #C8102E; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: 600;">Buscar</button>
+
+                <div class="search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                    <label class="sr-only" for="buscador">Buscar por nombre</label>
+                    <input type="search" id="buscador" placeholder="Buscar por nombre…" autocomplete="off">
                 </div>
             </div>
 
-            <!-- Tabla de Datos Dinámica -->
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="border-bottom: 1px solid #e0e0e0; text-align: left; color: #666; font-size: 0.85rem;">
-                        <th style="padding: 1rem 1.5rem;">NOMBRE DEL ARCHIVO</th>
-                        <th style="padding: 1rem 1.5rem;">SUBIDO POR</th>
-                        <th style="padding: 1rem 1.5rem;">FECHA DE SUBIDA</th>
-                        <th style="padding: 1rem 1.5rem;">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Los datos se cargan dinámicamente aquí -->
-                </tbody>
-            </table>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col" aria-sort="none" data-col="nombre"><button type="button" class="sort" data-sort="nombre">Nombre del archivo <span class="sort-arrow" aria-hidden="true">▲</span></button></th>
+                            <th scope="col" class="col-hide-sm">Área</th>
+                            <th scope="col" class="col-hide-sm">Subido por</th>
+                            <th scope="col" aria-sort="descending" data-col="fecha"><button type="button" class="sort" data-sort="fecha">Fecha de subida <span class="sort-arrow" aria-hidden="true">▼</span></button></th>
+                            <th scope="col">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+                <div id="estado"></div>
+            </div>
 
-            <!-- Controles de Paginación -->
-            <div class="pagination-footer" style="display: flex; justify-content: space-between; padding: 1.5rem; align-items: center; color: #666; font-size: 0.9rem;">
-                <div id="contadorArchivos">Mostrando archivos del sistema</div>
-                <div class="pagination-controls" style="display: flex; gap: 5px;">
-                    <button class="page-btn" disabled style="padding: 6px 12px; border: 1px solid #e0e0e0; background: white; border-radius: 4px; cursor: not-allowed;">Anterior</button>
-                    <button class="page-btn active" style="padding: 6px 12px; border: 1px solid #C8102E; background: #C8102E; color: white; border-radius: 4px;">1</button>
-                    <button class="page-btn" style="padding: 6px 12px; border: 1px solid #e0e0e0; background: white; border-radius: 4px;">Siguiente</button>
+            <div class="pagination">
+                <div class="pagination-info" id="contadorArchivos" aria-live="polite">&nbsp;</div>
+                <div class="pagination-buttons" id="paginacion"></div>
+            </div>
+        </section>
+    </main>
+
+    <dialog id="modalSubir" aria-labelledby="modalTitulo">
+        <form id="formSubir" method="dialog">
+            <div class="modal-head">
+                <h2 id="modalTitulo">Subir archivo</h2>
+                <button type="button" class="modal-close" id="btnCerrarModal" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="dropzone" id="dropzone">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+                    <p id="dropTexto"><strong>Arrastra el archivo aquí</strong><br>o <label class="pick" for="inputArchivo">búscalo en tu equipo</label></p>
+                    <input type="file" id="inputArchivo" class="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png">
+                </div>
+
+                <div class="field">
+                    <label for="selectArea">Área del documento</label>
+                    <select id="selectArea" required></select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-ghost" id="btnCancelarSubida">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btnEnviar">Subir archivo</button>
                 </div>
             </div>
-        </div>
-    </div>
+        </form>
+    </dialog>
 
-    <!-- SCRIPT DE SESIÓN Y FILTRADO POR ÁREAS -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
     <script>
-        let todosLosArchivos = [];
+        const API_BASE = 'http://localhost:3000';
+        const API_DOCUMENTOS = `${API_BASE}/documents`;   
+        const AREAS_BASE = ['Contabilidad', 'Producción', 'Recursos Humanos'];
+        const POR_PAGINA = 8;
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Verificación de Seguridad de Sesión
-            const usuarioGuardado = localStorage.getItem('usuarioActiva');
-            if (!usuarioGuardado) {
-                window.location.href = 'login.html';
-            } else {
-                const userDisplay = document.getElementById('userNameDisplay');
-                if(userDisplay) userDisplay.innerText = usuarioGuardado;
-            }
+        const estado = {
+            docs: [], area: 'Todos', q: '', anio: '', mes: '',
+            orden: 'fecha', dir: 'desc', pagina: 1, cargando: true, error: false
+        };
 
-            // 2. Cargar datos reales y renderizar la tabla por defecto
-            await cargarArchivos('Todos los Archivos');
-        });
+        let sesion = null;
 
-        async function cargarArchivos(categoriaFiltro) {
+        const $ = (id) => document.getElementById(id);
+
+        const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        const slug = (s) => norm(s).trim().replace(/\s+/g, '-');
+
+        const pad = (n) => String(n).padStart(2, '0');
+
+        function parseFecha(v) {
+            if (!v) return null;
+            const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(v));
+            if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+            const d = new Date(v);
+            return isNaN(d) ? null : d;
+        }
+
+        const fmtFecha = (d) => d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : '—';
+
+        function relativo(d) {
+            if (!d) return '';
+            const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+            const dias = Math.round((hoy - d) / 86400000);
+            if (dias < 0) return '';
+            if (dias === 0) return 'Hoy';
+            if (dias === 1) return 'Ayer';
+            if (dias < 31) return `Hace ${dias} días`;
+            return '';
+        }
+
+        const iniciales = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+
+        function tipoArchivo(nombre) {
+            const ext = (String(nombre).split('.').pop() || '').toLowerCase();
+            let clase = '';
+            if (ext === 'pdf') clase = 't-pdf';
+            else if (['xls', 'xlsx', 'csv'].includes(ext)) clase = 't-xls';
+            else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) clase = 't-img';
+            else if (['doc', 'docx'].includes(ext)) clase = 't-doc';
+            return { ext: ext.slice(0, 4).toUpperCase() || 'ARCH', clase };
+        }
+
+        function resaltar(nombre, q) {
+            const n = norm(nombre), b = norm(q).trim();
+            if (!b) return esc(nombre);
+            const i = n.indexOf(b);
+            if (i < 0 || n.length !== nombre.length) return esc(nombre);
+            return esc(nombre.slice(0, i)) + '<mark>' + esc(nombre.slice(i, i + b.length)) + '</mark>' + esc(nombre.slice(i + b.length));
+        }
+
+        let toastTimer;
+        function aviso(texto, ok = false) {
+            const t = $('toast');
+            t.textContent = texto;
+            t.classList.toggle('is-ok', ok);
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
+        }
+
+        
+        function leerSesion() {
+            const raw = localStorage.getItem('usuarioActiva');
+            if (!raw) return null;
             try {
-                const response = await fetch('/api/documentos');
-                todosLosArchivos = await response.json();
-                renderizarTabla(categoriaFiltro);
-            } catch (error) {
-                console.error('Error al conectar con la API de documentos:', error);
+                const obj = JSON.parse(raw);
+                if (obj && typeof obj === 'object') {
+                    const u = obj.usuario || obj;
+                    return {
+                        nombre: u.nombre || u.correo || 'Usuario',
+                        rol: u.rol || '',
+                        token: obj.token || u.token || localStorage.getItem('token') || ''
+                    };
+                }
+                return { nombre: String(obj), rol: '', token: localStorage.getItem('token') || '' };
+            } catch (e) {
+                return { nombre: raw, rol: '', token: localStorage.getItem('token') || '' };
             }
         }
 
-        function renderizarTabla(filtro) {
-            const tbody = document.querySelector('tbody');
-            tbody.innerHTML = '';
-
-            // Lógica de filtrado inteligente por área
-            const archivosFiltrados = filtro === 'Todos los Archivos' 
-                ? todosLosArchivos 
-                : todosLosArchivos.filter(doc => doc.departamento === filtro);
-
-            if (archivosFiltrados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2.5rem; color: #666;">No hay documentos registrados en esta categoría.</td></tr>`;
-                document.getElementById('contadorArchivos').innerText = `Mostrando 0 de ${todosLosArchivos.length} archivos`;
-                return;
-            }
-
-            archivosFiltrados.forEach(doc => {
-                const fila = `
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
-                        <td style="padding: 1rem 1.5rem; font-weight: 600; color: #333;">${doc.nombre}</td>
-                        <td style="padding: 1rem 1.5rem; color: #555;">${doc.subidoPor}</td>
-                        <td style="padding: 1rem 1.5rem; color: #555;">${doc.fecha}</td>
-                        <td style="padding: 1rem 1.5rem;"><a href="#" style="color: #C8102E; font-weight: bold; text-decoration: none;">Abrir en AWS</a></td>
-                    </tr>
-                `;
-                tbody.innerHTML += fila;
-            });
-
-            document.getElementById('contadorArchivos').innerText = `Mostrando ${archivosFiltrados.length} de ${todosLosArchivos.length} archivos`;
-        }
-
-        // Cambio visual de pestañas y filtrado en tiempo real
-        function cambiarPestana(elementoClickeado) {
-            const pestanas = document.querySelectorAll('.tab');
-            pestanas.forEach(p => {
-                p.classList.remove('active');
-                p.style.background = 'transparent';
-                p.style.color = '#666';
-                p.style.borderTop = 'none';
-            });
-
-            elementoClickeado.classList.add('active');
-            elementoClickeado.style.background = 'white';
-            elementoClickeado.style.color = '#C8102E';
-            elementoClickeado.style.borderTop = '3px solid #C8102E';
-
-            const categoriaSeleccionada = elementoClickeado.innerText.trim();
-            renderizarTabla(categoriaSeleccionada);
-        }
+        const authHeaders = () => sesion && sesion.token ? { Authorization: `Bearer ${sesion.token}` } : {};
 
         function cerrarSesion() {
             localStorage.removeItem('usuarioActiva');
+            localStorage.removeItem('token');
             window.location.href = 'login.html';
         }
+
+        function pintarUsuario() {
+            const primerNombre = sesion.nombre.split(' ')[0];
+            $('userNameDisplay').textContent = sesion.nombre;
+            $('userAvatar').textContent = iniciales(sesion.nombre);
+            $('userRoleDisplay').textContent = sesion.rol ? sesion.rol.charAt(0) + sesion.rol.slice(1).toLowerCase() : '';
+            $('saludo').textContent = `Hola, ${primerNombre}`;
+        }
+
+        function normalizarDoc(d) {
+    const fecha = parseFecha(d.fecha || d.createdAt || d.fechaSubida);
+    return {
+        id: d.id,
+        nombre: d.nombre || d.originalname || d.filename || d.name || '__',
+        subidoPor: d.subidoPor || (d.usuario && d.usuario.nombre) || (d.user && d.user.nombre) || '—',
+        departamento: d.departamento || d.area || 'General',
+        fecha,
+        url: d.url || d.path || d.urlArchivo || d.enlace || (d.filename ? `http://localhost:3000/uploads/${d.filename}` : '')
+    };
+}
+
+        async function cargar() {
+            estado.cargando = true; estado.error = false;
+            render();
+            try {
+                const res = await fetch(API_DOCUMENTOS, { headers: authHeaders() });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                const lista = Array.isArray(data) ? data : (data.documentos || data.data || []);
+                estado.docs = lista.map(normalizarDoc);
+            } catch (err) {
+                console.error('Error al conectar con la API de documentos:', err);
+                estado.error = true;
+            }
+            estado.cargando = false;
+            prepararFiltros();
+            render();
+        }
+
+
+
+        
+        function areasDisponibles() {
+            const extra = estado.docs.map(d => d.departamento).filter(a => a && !AREAS_BASE.includes(a));
+            return [...AREAS_BASE, ...new Set(extra)];
+        }
+
+        function prepararFiltros() {
+            const anios = [...new Set(estado.docs.map(d => d.fecha && d.fecha.getFullYear()).filter(Boolean))].sort((a, b) => b - a);
+            $('filtroAnio').innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+            $('filtroMes').innerHTML = '<option value="">Todos los meses</option>' + MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+            $('filtroAnio').value = estado.anio;
+            $('filtroMes').value = estado.mes;
+            $('selectArea').innerHTML = areasDisponibles().map(a => `<option>${esc(a)}</option>`).join('');
+        }
+
+        function filtrados() {
+            const q = norm(estado.q).trim();
+            let lista = estado.docs.filter(d => {
+                if (estado.area !== 'Todos' && d.departamento !== estado.area) return false;
+                if (q && !norm(d.nombre).includes(q)) return false;
+                if (estado.anio && (!d.fecha || d.fecha.getFullYear() !== +estado.anio)) return false;
+                if (estado.mes !== '' && (!d.fecha || d.fecha.getMonth() !== +estado.mes)) return false;
+                return true;
+            });
+            const dir = estado.dir === 'asc' ? 1 : -1;
+            lista.sort((a, b) => {
+                if (estado.orden === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+                return dir * ((a.fecha ? a.fecha.getTime() : 0) - (b.fecha ? b.fecha.getTime() : 0));
+            });
+            return lista;
+        }
+
+        function pintarResumen() {
+            const docs = estado.docs;
+            if (!docs.length) {
+                ['statTotal', 'statReciente'].forEach(id => $(id).textContent = '0');
+                $('statArea').textContent = '–'; $('statUltimo').textContent = '–';
+                ['statTotalSub', 'statAreaSub', 'statUltimoSub'].forEach(id => $(id).innerHTML = '&nbsp;');
+                return;
+            }
+            const hace30 = Date.now() - 30 * 86400000;
+            $('statTotal').textContent = docs.length;
+            $('statTotalSub').textContent = `en ${new Set(docs.map(d => d.departamento).filter(Boolean)).size} áreas`;
+            $('statReciente').textContent = docs.filter(d => d.fecha && d.fecha.getTime() >= hace30).length;
+
+            const conteo = {};
+            docs.forEach(d => { if (d.departamento) conteo[d.departamento] = (conteo[d.departamento] || 0) + 1; });
+            const top = Object.entries(conteo).sort((a, b) => b[1] - a[1])[0];
+            $('statArea').textContent = top ? top[0] : '–';
+            $('statAreaSub').textContent = top ? `${top[1]} archivos` : '';
+
+            const ultimo = [...docs].sort((a, b) => (b.fecha ? b.fecha.getTime() : 0) - (a.fecha ? a.fecha.getTime() : 0))[0];
+            $('statUltimo').textContent = ultimo.nombre;
+            $('statUltimo').title = ultimo.nombre;
+            $('statUltimoSub').textContent = `${ultimo.subidoPor} · ${fmtFecha(ultimo.fecha)}`;
+        }
+
+        function pintarTabs() {
+            const conteo = (a) => a === 'Todos' ? estado.docs.length : estado.docs.filter(d => d.departamento === a).length;
+            const items = ['Todos', ...areasDisponibles()];
+            $('tabs').innerHTML = items.map(a => `
+                <button type="button" role="tab" class="tab" data-area="${esc(a)}" aria-selected="${a === estado.area}">
+                    ${a === 'Todos' ? 'Todos los archivos' : esc(a)}
+                    <span class="tab-count">${conteo(a)}</span>
+                </button>`).join('');
+        }
+
+        function pintarEncabezadosOrden() {
+            document.querySelectorAll('th[data-col]').forEach(th => {
+                const activo = th.dataset.col === estado.orden;
+                th.setAttribute('aria-sort', activo ? (estado.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+                th.querySelector('.sort-arrow').textContent = activo && estado.dir === 'asc' ? '▲' : '▼';
+            });
+        }
+
+        const ICONO_VACIO = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+
+        function pintarEstado(html) { $('estado').innerHTML = html; }
+
+        function render() {
+            const tbody = $('tbody');
+            pintarTabs();
+            pintarEncabezadosOrden();
+            pintarResumen();
+            $('btnLimpiar').hidden = !(estado.q || estado.anio || estado.mes !== '');
+
+            if (estado.cargando) {
+                tbody.innerHTML = Array.from({ length: 5 }, () =>
+                    `<tr class="skeleton"><td><div style="width:70%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td><div style="width:60%"></div></td><td><div style="width:40%"></div></td></tr>`).join('');
+                pintarEstado('');
+                $('contadorArchivos').innerHTML = '&nbsp;';
+                $('paginacion').innerHTML = '';
+                return;
+            }
+
+            if (estado.error) {
+                tbody.innerHTML = '';
+                pintarEstado(`<div class="state">${ICONO_VACIO}
+                    <h3>No pudimos cargar los documentos</h3>
+                    <p>Revisa que la API esté encendida y vuelve a intentarlo.</p>
+                    <div class="state-actions">
+                        <button type="button" class="btn-primary" id="btnReintentar">Reintentar</button>
+                        <button type="button" class="btn-ghost" id="btnEjemplo">Ver datos de ejemplo</button>
+                    </div></div>`);
+                $('contadorArchivos').innerHTML = '&nbsp;';
+                $('paginacion').innerHTML = '';
+                return;
+            }
+
+            const lista = filtrados();
+            const totalPaginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+            if (estado.pagina > totalPaginas) estado.pagina = totalPaginas;
+            const ini = (estado.pagina - 1) * POR_PAGINA;
+            const visibles = lista.slice(ini, ini + POR_PAGINA);
+
+            if (!visibles.length) {
+                tbody.innerHTML = '';
+                const hayFiltros = estado.q || estado.anio || estado.mes !== '' || estado.area !== 'Todos';
+                pintarEstado(hayFiltros
+                    ? `<div class="state">${ICONO_VACIO}<h3>No encontramos documentos</h3><p>Prueba con otro nombre, otra área o quita los filtros de fecha.</p></div>`
+                    : `<div class="state">${ICONO_VACIO}<h3>Aún no hay documentos</h3><p>Sube el primer archivo para empezar a organizar la documentación.</p><div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivo</button></div></div>`);
+                $('contadorArchivos').textContent = `Mostrando 0 de ${estado.docs.length} archivos`;
+                $('paginacion').innerHTML = '';
+                return;
+            }
+
+            pintarEstado('');
+            tbody.innerHTML = visibles.map(d => {
+                const t = tipoArchivo(d.nombre);
+                const rel = relativo(d.fecha);
+            const accionAbrir = d.url
+                ? `<a class="action-link" href="${esc(d.url)}" target="_blank" rel="noopener">Abrir</a>`
+                : `<button type="button" class="action-link" data-sin-url>Abrir</button>`;
+
+            const accionEliminar = `<button type="button" class="action-link is-danger" data-eliminar="${d.id}">Eliminar</button>`;
+
+            const accion = `<div style="display:flex; gap:12px;">${accionAbrir} ${accionEliminar}</div>`;
+                return `
+                <tr>
+                    <td><div class="file-cell"><span class="file-ico ${t.clase}" aria-hidden="true">${esc(t.ext)}</span><span class="file-name">${resaltar(d.nombre, estado.q)}</span></div></td>
+                    <td class="col-hide-sm">${d.departamento ? `<span class="chip a-${slug(d.departamento)}">${esc(d.departamento)}</span>` : '—'}</td>
+                    <td class="col-hide-sm"><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(d.subidoPor))}</span>${esc(d.subidoPor)}</div></td>
+                    <td class="date">${fmtFecha(d.fecha)}${rel ? `<small>${rel}</small>` : ''}</td>
+                    <td>${accion}</td>
+                </tr>`;
+            }).join('');
+
+            $('contadorArchivos').textContent = `Mostrando ${ini + 1}–${ini + visibles.length} de ${lista.length} archivos` + (lista.length !== estado.docs.length ? ` (${estado.docs.length} en total)` : '');
+            pintarPaginacion(totalPaginas);
+        }
+
+        function pintarPaginacion(total) {
+            const p = estado.pagina;
+            const nums = [];
+            for (let i = 1; i <= total; i++) {
+                if (i === 1 || i === total || Math.abs(i - p) <= 1) nums.push(i);
+                else if (nums[nums.length - 1] !== '…') nums.push('…');
+            }
+            $('paginacion').innerHTML =
+                `<button type="button" class="page-btn" data-pag="${p - 1}" ${p === 1 ? 'disabled' : ''}>Anterior</button>` +
+                nums.map(n => n === '…'
+                    ? '<span class="page-btn" style="border:0;background:none;display:grid;place-items:center">…</span>'
+                    : `<button type="button" class="page-btn ${n === p ? 'active' : ''}" data-pag="${n}" ${n === p ? 'aria-current="page"' : ''}>${n}</button>`).join('') +
+                `<button type="button" class="page-btn" data-pag="${p + 1}" ${p === total ? 'disabled' : ''}>Siguiente</button>`;
+        }
+
+        const modal = $('modalSubir');
+        const inputArchivo = $('inputArchivo');
+
+        function abrirModal() {
+            $('formSubir').reset();
+            textoDrop();
+            modal.showModal();
+        }
+
+        function cerrarModal() { modal.close(); }
+
+        function textoDrop() {
+            const f = inputArchivo.files[0];
+            $('dropTexto').innerHTML = f
+                ? `<span class="picked">${esc(f.name)}</span><br><label class="pick" for="inputArchivo">Cambiar archivo</label>`
+                : '<strong>Arrastra el archivo aquí</strong><br>o <label class="pick" for="inputArchivo">búscalo en tu equipo</label>';
+        }
+
+        async function subir(e) {
+    e.preventDefault();
+    const file = inputArchivo.files[0];
+    if (!file) { aviso('Elige un archivo antes de subirlo.'); return; }
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('departamento', $('selectArea').value); 
+
+    const btn = $('btnEnviar');
+    btn.disabled = true; btn.textContent = 'Subiendo…';
+    try {
+        
+        const res = await fetch(`${API_DOCUMENTOS}/upload`, { method: 'POST', headers: authHeaders(), body: fd });
+        if (res.status === 401) { cerrarSesion(); return; }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        cerrarModal();
+        aviso('Archivo subido correctamente.', true);
+        await cargar();
+    } catch (err) {
+        console.error(err);
+        aviso('No se pudo subir el archivo. Inténtalo de nuevo.');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Subir archivo';
+    }
+}
+
+        function conectarEventos() {
+            $('btnCerrarSesion').addEventListener('click', cerrarSesion);
+            $('btnSubirArchivo').addEventListener('click', abrirModal);
+            $('btnSubirArchivo2').addEventListener('click', abrirModal);
+            $('btnVerDocumentos').addEventListener('click', () => $('panel').scrollIntoView({ behavior: 'smooth' }));
+
+            $('tabs').addEventListener('click', (e) => {
+                const b = e.target.closest('.tab'); if (!b) return;
+                estado.area = b.dataset.area; estado.pagina = 1; render();
+            });
+
+            let debounce;
+            $('buscador').addEventListener('input', (e) => {
+                clearTimeout(debounce);
+                debounce = setTimeout(() => { estado.q = e.target.value; estado.pagina = 1; render(); }, 180);
+            });
+
+            $('filtroAnio').addEventListener('change', (e) => { estado.anio = e.target.value; estado.pagina = 1; render(); });
+            $('filtroMes').addEventListener('change', (e) => { estado.mes = e.target.value; estado.pagina = 1; render(); });
+
+            $('btnLimpiar').addEventListener('click', () => {
+                estado.q = ''; estado.anio = ''; estado.mes = ''; estado.pagina = 1;
+                $('buscador').value = ''; $('filtroAnio').value = ''; $('filtroMes').value = '';
+                render();
+            });
+
+            document.querySelector('thead').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-sort]'); if (!b) return;
+                const col = b.dataset.sort;
+                if (estado.orden === col) estado.dir = estado.dir === 'asc' ? 'desc' : 'asc';
+                else { estado.orden = col; estado.dir = col === 'fecha' ? 'desc' : 'asc'; }
+                render();
+            });
+
+            $('paginacion').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-pag]'); if (!b || b.disabled) return;
+                estado.pagina = +b.dataset.pag; render();
+                $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+document.querySelector('.panel').addEventListener('click', (e) => {
+    const btnEliminar = e.target.closest('[data-eliminar]');
+    if (btnEliminar) {
+        eliminarDocumento(btnEliminar.dataset.eliminar);
+        return;
+    }
+
+    if (e.target.closest('#btnReintentar')) cargar();
+    else if (e.target.closest('#btnEjemplo')) datosDeEjemplo();
+    else if (e.target.closest('[data-abrir-modal]')) abrirModal();
+    else if (e.target.closest('[data-sin-url]')) aviso('Este documento todavía no tiene enlace. Revisa que la API devuelva el campo "url".');
+});
+
+            $('btnCerrarModal').addEventListener('click', cerrarModal);
+            $('btnCancelarSubida').addEventListener('click', cerrarModal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
+            $('formSubir').addEventListener('submit', subir);
+            inputArchivo.addEventListener('change', textoDrop);
+
+            const dz = $('dropzone');
+            ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('is-over'); }));
+            ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('is-over'); }));
+            dz.addEventListener('drop', (e) => {
+                if (e.dataTransfer.files.length) { inputArchivo.files = e.dataTransfer.files; textoDrop(); }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            sesion = leerSesion();
+            if (!sesion) { window.location.href = 'login.html'; return; }
+            pintarUsuario();
+            conectarEventos();
+            prepararFiltros();
+            cargar();
+        });
+
+    async function eliminarDocumento(id) {
+    if (!id || id === 'undefined') {
+        aviso('No se encontró el ID del documento.');
+        return;
+    }
+
+    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
+
+    try {
+        const res = await fetch(`${API_DOCUMENTOS}/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        });
+
+        if (res.status === 401) { cerrarSesion(); return; }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        aviso('Documento eliminado correctamente.', true);
+        await cargar();
+    } catch (err) {
+        console.error(err);
+        aviso('No se pudo eliminar el documento.');
+    }
+}    
     </script>
 </body>
 </html>

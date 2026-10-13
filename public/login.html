@@ -81,21 +81,23 @@
             errorDiv.style.display = 'none';
 
             try {
-                const respuesta = await fetch('/api/login', {
+                const respuesta = await fetch('http://localhost:3000/usuarios/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: document.getElementById('email').value,
-                        password: document.getElementById('password').value
+                        correo: document.getElementById('email').value,
+                        contrasena: document.getElementById('password').value
                     })
                 });
 
                 if (respuesta.ok) {
                     const data = await respuesta.json();
-                    localStorage.setItem('usuarioActiva', data.usuario); 
+                   
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuarioActiva', JSON.stringify(data)); 
                     window.location.href = 'dashboard.html';
                 } else {
-                    mostrarError('Usuario o contraseña incorrectos.');
+                    mostrarError('Correo o contraseña incorrectos.');
                     btn.innerHTML = 'Iniciar sesión';
                     btn.disabled = false;
                 }

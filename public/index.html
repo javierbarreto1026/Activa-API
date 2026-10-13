@@ -6,7 +6,7 @@
     <title>Activa Uniformes | Subir Archivo</title>
     <link rel="icon" type="image/png" href="https://clustermodanorte.cccucuta.org.co/wp-content/uploads/2021/08/activa-logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Vinculamos ambos CSS -->
+
     <link rel="stylesheet" href="dashboard.css"> 
     <link rel="stylesheet" href="index.css">
 </head>
@@ -64,6 +64,53 @@
             e.preventDefault();
             alert("Próximamente: Este botón enviará el archivo a NestJS y lo guardará en AWS S3.");
         });
+    </script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput.files.length === 0) {
+        alert('Por favor selecciona un archivo.');
+        return;
+    }
+
+    
+    const formData = new FormData();
+    
+    formData.append('file', fileInput.files[0]);
+
+   
+    const token = localStorage.getItem('token');
+
+    try {
+        const respuesta = await fetch('http://localhost:3000/documents/upload', {
+            method: 'POST',
+            headers: {
+                
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (respuesta.ok) {
+            alert('¡Documento subido exitosamente!');
+            window.location.href = 'dashboard.html'; 
+        } else {
+            const errorData = await respuesta.json();
+            alert('Error al subir el documento: ' + (errorData.message || 'No autorizado'));
+        }
+    } catch (error) {
+        console.error('Error de conexión:', error);
+        alert('No se pudo conectar con el servidor.');
+    }
+});
+
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+    const fileName = e.target.files[0] ? e.target.files[0].name : 'Arrastra tu archivo aquí o haz clic para explorar';
+    document.getElementById('fileName').innerText = fileName;
+});
     </script>
 </body>
 </html>
