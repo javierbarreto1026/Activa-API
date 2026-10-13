@@ -10,30 +10,40 @@ export class DocumentsService {
     private documentoRepository: Repository<Documento>,
   ) {}
 
-  // Guardar un nuevo documento en la base de datos
-  async guardarDocumento(file: Express.Multer.File, userId: number) {
+  async guardarDocumento(
+    file: Express.Multer.File,
+    userId: number,
+    departamento: string = 'GENERAL',
+  ) {
     const nuevoDocumento = this.documentoRepository.create({
       nombreOriginal: file.originalname,
       nombreGuardado: file.filename,
       ruta: file.path,
-      usuarioId: userId, // Guardamos quién lo subió gracias al JWT
-      departamento: 'GENERAL', // Lo dejamos genérico por ahora
+      usuarioId: userId,
+      departamento: departamento,
     });
 
     return await this.documentoRepository.save(nuevoDocumento);
   }
 
-  // Listar todos los documentos
   async findAll() {
-    return await this.documentoRepository.find();
+    const documentos = await this.documentoRepository.find({
+      relations: { usuario: true },
+      order: { id: 'DESC' },
+    });
+
+    return documentos.map((doc) => ({
+      ...doc,
+      nombre: doc.nombreOriginal,
+      subidoPor: doc.usuario ? doc.usuario.nombre : `Usuario #${doc.usuarioId}`,
+      fecha: doc.fechaSubida || new Date(),
+    }));
   }
 
-  // Buscar un documento por ID
   async findOne(id: string) {
     return await this.documentoRepository.findOne({ where: { id: Number(id) } });
   }
 
-  // Eliminar un documento
   async remove(id: string) {
     await this.documentoRepository.delete(id);
     return { mensaje: `Documento con id ${id} eliminado correctamente` };

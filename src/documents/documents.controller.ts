@@ -8,6 +8,8 @@ import {
   UploadedFile,
   UseGuards,
   Request,
+  Body,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -19,6 +21,7 @@ import { JwtAuthGuard } from '../usuarios/jwt-auth.guard';
 interface AuthenticatedRequest extends ExpressRequest {
   user: {
     id: number;
+    sub?: number;
     correo: string;
     rol: string;
   };
@@ -43,9 +46,18 @@ export class DocumentsController {
       }),
     }),
   )
-  uploadDocument(@UploadedFile() file: Express.Multer.File, @Request() req: AuthenticatedRequest) {
-    const userId = req.user.id;
-    return this.documentsService.guardarDocumento(file, userId);
+  uploadDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: AuthenticatedRequest,
+    @Body('departamento') departamento: string,
+  ) {
+    const userId = req.user.id || req.user.sub;
+
+    if (!userId) {
+      throw new UnauthorizedException('Usuario no válido o sesión expirada');
+    }
+
+    return this.documentsService.guardarDocumento(file, userId, departamento);
   }
 
   // GET: http://localhost:3000/documents

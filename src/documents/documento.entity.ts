@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
+import { Usuario } from '../usuarios/usuario.entity';
 
 @Entity('documentos')
 export class Documento {
@@ -14,7 +22,7 @@ export class Documento {
   @Column()
   ruta!: string;
 
-  @Column({ default: 'GENERAL' })
+  @Column()
   departamento!: string;
 
   @Column()
@@ -22,4 +30,8 @@ export class Documento {
 
   @CreateDateColumn()
   fechaSubida!: Date;
+
+  @ManyToOne(() => Usuario)
+  @JoinColumn({ name: 'usuarioId' })
+  usuario!: Usuario;
 }
