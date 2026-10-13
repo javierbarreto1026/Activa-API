@@ -53,14 +53,14 @@ export class UsuariosService {
       throw new UnauthorizedException('Correo o contraseña incorrectos');
     }
 
-    const payload = { sub: usuario.id, correo: usuario.correo };
-
+    const payload = { sub: usuario.id, correo: usuario.correo, rol: usuario.rol };
     const tokenGenerado = this.jwtService.sign(payload);
 
     return {
       id: usuario.id,
       nombre: usuario.nombre,
       correo: usuario.correo,
+      rol: usuario.rol,
       token: tokenGenerado,
     };
   }
@@ -69,7 +69,6 @@ export class UsuariosService {
     return await this.usuarioRepository.find();
   }
 
-  // 2. Buscar un usuario por su ID
   async findOne(id: number) {
     const usuario = await this.usuarioRepository.findOne({ where: { id } });
     if (!usuario) {
