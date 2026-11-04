@@ -17,8 +17,14 @@ export class Usuario {
   @Column({ default: 'USUARIO ' })
   rol!: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: false })
   departamento!: string;
+
+  @Column({ nullable: true })
+  codigoRecuperacion!: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  expiracionCodigo!: Date;
 
   @CreateDateColumn()
   fecha_creacion!: Date;

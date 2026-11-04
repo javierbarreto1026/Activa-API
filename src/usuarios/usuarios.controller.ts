@@ -31,6 +31,20 @@ export class UsuariosController {
     };
   }
 
+  @Post('crear')
+  async crearUsuario(
+    @Body()
+    body: {
+      nombre: string;
+      correo: string;
+      contrasena: string;
+      departamento: string;
+      rol?: string;
+    },
+  ) {
+    return await this.usuariosService.crearUsuarioPorAdmin(body);
+  }
+
   @Post('login')
   async login(@Body() loginUsuarioDto: LoginUsuarioDto) {
     const usuarioValidado = await this.usuariosService.validarUsuario(loginUsuarioDto);
@@ -60,5 +74,19 @@ export class UsuariosController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usuariosService.findOne(Number(id));
+  }
+  @Post('solicitar-codigo')
+  async solicitarCodigo(@Body('correo') correo: string) {
+    return await this.usuariosService.solicitarCodigoRecuperacion(correo);
+  }
+
+  // 2. Endpoint para verificar el código y cambiar la clave
+  @Post('restablecer-contrasena')
+  async restablecerContrasena(
+    @Body('correo') correo: string,
+    @Body('codigo') codigo: string,
+    @Body('nuevaContrasena') nuevaContrasena: string,
+  ) {
+    return await this.usuariosService.restablecerContrasena(correo, codigo, nuevaContrasena);
   }
 }
