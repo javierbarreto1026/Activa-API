@@ -3,119 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activa Uniformes - Portal Corporativo</title>
-   
+    <title>Iniciar sesión | Activa Uniformes</title>
+
+    <!-- Fuentes y hoja de estilos externa -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="login.css">
 </head>
 <body>
 
-    <div class="login-card">
-        <div class="brand-logo">ACTIVA <span>UNIFORMES</span></div>
-        <p class="subtitle" id="formDesc">Portal de Gestión Documental</p>
+    <div class="screen">
 
-       
-        <div id="mensajeError" class="error-msg"></div>
+        <!-- ================= PANEL DE MARCA ================= -->
+        <aside class="brand-panel">
+            <div class="brand-panel__inner">
+                <h1 class="brand-mark">
+                    <span class="brand-mark__primary">ACTIVA</span>
+                    <span class="brand-mark__secondary">UNIFORMES</span>
+                </h1>
+                <p class="brand-tagline">Portal de Gestión Documental</p>
+                <p class="brand-copy">Centraliza la documentación de Producción, Comercial y Recursos Humanos en un mismo lugar.</p>
+            </div>
+            <div class="brand-panel__seam" aria-hidden="true"></div>
+        </aside>
 
-  
-        <form id="loginForm" onsubmit="procesarLogin(event)">
-            <div class="form-group">
-                <label>Correo corporativo</label>
-                <input type="email" id="email" required placeholder="ejemplo@empresa.com">
-            </div>
-            <div class="form-group">
-                <label>Contraseña</label>
-                <input type="password" id="password" required placeholder="••••••••">
-            </div>
-            
-            <button type="submit" id="btnSubmit" class="btn-primary">Iniciar sesión</button>
-            <button type="button" class="btn-secondary" onclick="toggleForms()">¿Necesitas actualizar tu contraseña?</button>
-        </form>
+        <!-- ================= PANEL DE AUTENTICACIÓN ================= -->
+        <main class="auth-panel">
+            <div class="auth-panel__inner">
 
-        
-        <form id="resetForm" onsubmit="procesarReset(event)">
-            <div class="form-group">
-                <label>Correo corporativo</label>
-                <input type="email" id="resetEmail" required>
+                <!-- ----- Iniciar sesión ----- -->
+                <div id="loginPanel">
+                    <div class="panel-heading">
+                        <h2>Iniciar sesión</h2>
+                        <p>Ingresa con tu correo corporativo para continuar.</p>
+                    </div>
+
+                    <form id="loginForm" onsubmit="procesarLogin(event)">
+                        <div class="form-group">
+                            <label for="email">Correo corporativo</label>
+                            <input type="email" id="email" required placeholder="nombre@activauniformes.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Contraseña</label>
+                            <input type="password" id="password" required placeholder="••••••••">
+                        </div>
+
+                        <button type="submit" id="btnSubmit" class="btn-primary">Iniciar sesión</button>
+                    </form>
+
+                    <button type="button" class="btn-link" onclick="toggleForms()">¿Necesitas actualizar tu contraseña?</button>
+                </div>
+
+                <!-- ----- Restablecimiento por código ----- -->
+                <div id="resetPanel" style="display: none;">
+                    <div class="panel-heading">
+                        <h2>Restablecer contraseña</h2>
+                        <p id="resetSubtitulo">Ingresa tu correo para recibir un código de verificación</p>
+                    </div>
+
+                    <!-- Paso 1: Pedir el Correo -->
+                    <form id="formPaso1" onsubmit="solicitarCodigo(event)">
+                        <div class="form-group">
+                            <label for="resetEmail">Correo corporativo</label>
+                            <input type="email" id="resetEmail" required placeholder="nombre@activauniformes.com">
+                        </div>
+
+                        <button type="submit" id="btnEnviarCodigo" class="btn-primary">Enviar código</button>
+                    </form>
+
+                    <!-- Paso 2: Digitar Código OTP y Nueva Contraseña -->
+                    <form id="formPaso2" onsubmit="confirmarCambio(event)" style="display: none;">
+                        <div class="form-group">
+                            <label for="codigoOTP">Código de verificación (6 dígitos)</label>
+                            <input type="text" id="codigoOTP" class="otp-input" required placeholder="123456" maxlength="6" autocomplete="off" inputmode="numeric">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nuevaClave">Nueva contraseña</label>
+                            <input type="password" id="nuevaClave" required placeholder="••••••••">
+                        </div>
+
+                        <button type="submit" id="btnCambiarClave" class="btn-primary">Actualizar clave</button>
+                    </form>
+
+                    <button type="button" class="btn-link" onclick="toggleForms()">Volver al inicio de sesión</button>
+                </div>
+
             </div>
-            <div class="form-group">
-                <label>Contraseña actual</label>
-                <input type="password" id="resetOld" required>
-            </div>
-            <div class="form-group">
-                <label>Nueva contraseña</label>
-                <input type="password" id="resetNew" required>
-            </div>
-            
-            <button type="submit" id="btnReset" class="btn-primary">Actualizar clave</button>
-            <button type="button" class="btn-secondary" onclick="toggleForms()">Volver al inicio de sesión</button>
-        </form>
+        </main>
+
     </div>
 
     <script>
-        const errorDiv = document.getElementById('mensajeError');
+        const API_BASE = window.location.origin;
 
+        // Alternar vistas entre Login y Restablecimiento
         function toggleForms() {
-            const login = document.getElementById('loginForm');
-            const reset = document.getElementById('resetForm');
-            const desc = document.getElementById('formDesc');
-            
-            errorDiv.style.display = 'none';
+            const loginPanel = document.getElementById('loginPanel');
+            const resetPanel = document.getElementById('resetPanel');
 
-            if (login.style.display === 'none') {
-                login.style.display = 'block';
-                reset.style.display = 'none';
-                desc.innerText = 'Portal de Gestión Documental';
+            if (loginPanel.style.display === 'none') {
+                loginPanel.style.display = 'block';
+                resetPanel.style.display = 'none';
             } else {
-                login.style.display = 'none';
-                reset.style.display = 'block';
-                desc.innerText = 'Ingresa tus datos actuales y la nueva clave';
+                loginPanel.style.display = 'none';
+                resetPanel.style.display = 'block';
+
+                // Restablecer vista inicial de recuperación (Paso 1)
+                document.getElementById('formPaso1').style.display = 'block';
+                document.getElementById('formPaso2').style.display = 'none';
+                document.getElementById('resetSubtitulo').textContent = 'Ingresa tu correo para recibir un código de verificación';
+                document.getElementById('formPaso1').reset();
+                document.getElementById('formPaso2').reset();
             }
         }
 
+        // 1. LÓGICA DE INICIO DE SESIÓN
         async function procesarLogin(event) {
             event.preventDefault();
+
+            const correo = document.getElementById('email').value.trim();
+            const contrasena = document.getElementById('password').value;
             const btn = document.getElementById('btnSubmit');
-            
-            btn.innerHTML = 'Verificando...';
+
             btn.disabled = true;
-            errorDiv.style.display = 'none';
+            btn.textContent = 'Iniciando...';
 
             try {
-                const respuesta = await fetch('http://localhost:3000/usuarios/login', {
+                const res = await fetch(`${API_BASE}/usuarios/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        correo: document.getElementById('email').value,
-                        contrasena: document.getElementById('password').value
-                    })
+                    body: JSON.stringify({ correo, contrasena })
                 });
 
-                if (respuesta.ok) {
-                    const data = await respuesta.json();
-                   
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('usuarioActiva', JSON.stringify(data)); 
-                    window.location.href = 'dashboard.html';
-                } else {
-                    mostrarError('Correo o contraseña incorrectos.');
-                    btn.innerHTML = 'Iniciar sesión';
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert(data.message || 'Correo o contraseña incorrectos.');
                     btn.disabled = false;
+                    btn.textContent = 'Iniciar sesión';
+                    return;
                 }
-            } catch (error) {
-                mostrarError('Error de conexión con el servidor.');
-                btn.innerHTML = 'Iniciar sesión';
+
+                const token = data.token || data.access_token || data.accessToken || (data.usuario && data.usuario.token);
+                const usuario = data.usuario || data.user || { correo };
+
+                if (!token) {
+                    alert('El servidor no devolvió un token válido.');
+                    btn.disabled = false;
+                    btn.textContent = 'Iniciar sesión';
+                    return;
+                }
+
+                localStorage.setItem('token', token);
+                localStorage.setItem('usuarioActiva', JSON.stringify({ ...usuario, token }));
+                window.location.href = 'dashboard.html';
+
+            } catch (err) {
+                console.error('Error en login:', err);
+                alert('Error de conexión con el servidor. Revisa que NestJS esté encendido.');
                 btn.disabled = false;
+                btn.textContent = 'Iniciar sesión';
             }
         }
 
-        function procesarReset(event) {
+        // 2. RECUPERACIÓN - PASO 1: Enviar Código por Correo
+        async function solicitarCodigo(event) {
             event.preventDefault();
-            mostrarError('La función de actualización está en desarrollo.');
+
+            const correo = document.getElementById('resetEmail').value.trim();
+            const btn = document.getElementById('btnEnviarCodigo');
+
+            btn.disabled = true;
+            btn.textContent = 'Enviando código...';
+
+            try {
+                const res = await fetch(`${API_BASE}/usuarios/solicitar-codigo`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert(data.message || 'No se encontró una cuenta asociada a este correo.');
+                    btn.disabled = false;
+                    btn.textContent = 'Enviar código';
+                    return;
+                }
+
+                alert('¡Código enviado con éxito! Revisa tu bandeja de entrada.');
+
+                // Transición al Paso 2
+                document.getElementById('formPaso1').style.display = 'none';
+                document.getElementById('formPaso2').style.display = 'block';
+                document.getElementById('resetSubtitulo').textContent = 'Ingresa el código enviado a ' + correo;
+
+            } catch (err) {
+                console.error('Error al enviar código:', err);
+                alert('Error de conexión con el servidor.');
+                btn.disabled = false;
+                btn.textContent = 'Enviar código';
+            }
         }
 
-        function mostrarError(mensaje) {
-            errorDiv.innerText = mensaje;
-            errorDiv.style.display = 'block';
+        // 3. RECUPERACIÓN - PASO 2: Confirmar Código y Actualizar Clave
+        async function confirmarCambio(event) {
+            event.preventDefault();
+
+            const correo = document.getElementById('resetEmail').value.trim();
+            const codigo = document.getElementById('codigoOTP').value.trim();
+            const nuevaContrasena = document.getElementById('nuevaClave').value;
+            const btn = document.getElementById('btnCambiarClave');
+
+            btn.disabled = true;
+            btn.textContent = 'Actualizando clave...';
+
+            try {
+                const res = await fetch(`${API_BASE}/usuarios/restablecer-contrasena`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo, codigo, nuevaContrasena })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert(data.message || 'El código ingresado es incorrecto o ya expiró.');
+                    btn.disabled = false;
+                    btn.textContent = 'Actualizar clave';
+                    return;
+                }
+
+                alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.');
+                toggleForms();
+
+            } catch (err) {
+                console.error('Error al cambiar contraseña:', err);
+                alert('Error al intentar actualizar la contraseña.');
+                btn.disabled = false;
+                btn.textContent = 'Actualizar clave';
+            }
         }
     </script>
 </body>

@@ -8,6 +8,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="dashboard.css">
+
+    <script>
+        
+        if (!localStorage.getItem('token')) {
+            window.location.replace('login.html');
+        }
+
+        
+        window.history.pushState(null, "", window.location.href);
+        window.onpopstate = function () {
+            window.history.pushState(null, "", window.location.href);
+        };
+    </script>
 </head>
 <body>
     <header>
@@ -20,7 +33,8 @@
             <div class="nav-right">
                 <div class="nav-links">
                     <button type="button" class="nav-link" id="btnSubirArchivo">Subir archivo</button>
-                    <button type="button" class="nav-link" id="btnVerDocumentos">Ver documentos</button>
+                    
+                    <button type="button" class="nav-link" id="btnGestionAdmin" style="display: none;" onclick="abrirModalAdmin()">Gestión de Usuarios</button>
                 </div>
 
                 <div class="user-chip">
@@ -77,12 +91,13 @@
             <div class="tabs" role="tablist" id="tabs" aria-label="Áreas"></div>
 
             <div class="toolbar">
-                <div class="filters">
-                    <span class="filters-label">Fecha de subida</span>
-                    <label class="sr-only" for="filtroAnio">Año</label>
-                    <select id="filtroAnio"><option value="">Todos los años</option></select>
-                    <label class="sr-only" for="filtroMes">Mes</label>
-                    <select id="filtroMes"><option value="">Todos los meses</option></select>
+                <div class="filters" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="filters-label">Fecha del documento</span>
+                    <label for="filtroDesde" class="sr-only">Desde</label>
+                    <input type="date" id="filtroDesde" title="Fecha desde" style="padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;">
+                    <span style="color: #666; font-size: 0.85rem; font-weight: 600;">a</span>
+                    <label for="filtroHasta" class="sr-only">Hasta</label>
+                    <input type="date" id="filtroHasta" title="Fecha hasta" style="padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;">
                     <button type="button" class="btn-ghost" id="btnLimpiar" hidden>Quitar filtros</button>
                 </div>
 
@@ -100,7 +115,7 @@
                             <th scope="col" aria-sort="none" data-col="nombre"><button type="button" class="sort" data-sort="nombre">Nombre del archivo <span class="sort-arrow" aria-hidden="true">▲</span></button></th>
                             <th scope="col" class="col-hide-sm">Área</th>
                             <th scope="col" class="col-hide-sm">Subido por</th>
-                            <th scope="col" aria-sort="descending" data-col="fecha"><button type="button" class="sort" data-sort="fecha">Fecha de subida <span class="sort-arrow" aria-hidden="true">▼</span></button></th>
+                            <th scope="col" aria-sort="descending" data-col="fecha"><button type="button" class="sort" data-sort="fecha">Fecha del documento <span class="sort-arrow" aria-hidden="true">▼</span></button></th>
                             <th scope="col">Acciones</th>
                         </tr>
                     </thead>
@@ -116,6 +131,7 @@
         </section>
     </main>
 
+    
     <dialog id="modalSubir" aria-labelledby="modalTitulo">
         <form id="formSubir" method="dialog">
             <div class="modal-head">
@@ -126,12 +142,18 @@
                 <div class="dropzone" id="dropzone">
                     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
                     <p id="dropTexto"><strong>Arrastra el archivo aquí</strong><br>o <label class="pick" for="inputArchivo">búscalo en tu equipo</label></p>
-                    <input type="file" id="inputArchivo" class="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png">
+                    <input type="file" id="inputArchivo" class="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.jpg,.jpeg,.png,.webp">
                 </div>
 
                 <div class="field">
                     <label for="selectArea">Área del documento</label>
                     <select id="selectArea" required></select>
+                </div>
+
+                <div class="field">
+                    <label for="inputFechaDocumento">Fecha del documento <span class="field-optional">(opcional)</span></label>
+                    <input type="date" id="inputFechaDocumento" aria-describedby="ayudaFechaDocumento">
+                    <small class="field-hint" id="ayudaFechaDocumento">Úsala para archivos históricos, como actas o facturas de años anteriores. Si la dejas vacía se usará la fecha de hoy.</small>
                 </div>
 
                 <div class="modal-actions">
@@ -142,39 +164,126 @@
         </form>
     </dialog>
 
+  
+    <div id="modalAdmin" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
+        <div style="background: #ffffff; padding: 2.5rem; border-radius: 12px; width: 90%; max-width: 600px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            
+            <span onclick="cerrarModalAdmin()" style="position: absolute; top: 15px; right: 20px; font-size: 1.8rem; cursor: pointer; color: #999;">&times;</span>
+            
+            <div style="margin-bottom: 1.5rem; text-align: center;">
+                <h2 style="color: #c8102e; margin: 0 0 0.5rem 0; font-size: 1.5rem;">Gestión de Personal</h2>
+                <p style="color: #666; font-size: 0.95rem; margin: 0;">Registra una nueva cuenta de empleado</p>
+            </div>
+
+            <form id="formCrearUsuario" onsubmit="registrarEmpleado(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        <div>
+                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Nombre completo</label>
+                            <input type="text" id="regNombre" required placeholder="Ej. Karla Gómez" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Contraseña inicial</label>
+                            <input type="text" id="regClave" required placeholder="••••••••" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Rol en el sistema</label>
+                            <select id="regRol" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
+                                <option value="usuario">Usuario normal</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        <div>
+                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Correo corporativo</label>
+                            <input type="email" id="regCorreo" required placeholder="karla@empresa.com" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
+                        </div>
+                        <div>
+                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Departamento</label>
+                            <select id="regDepartamento" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
+                                <option value="">Selecciona...</option>
+                                <option value="Ventas">Ventas</option>
+                                <option value="Recursos Humanos">Recursos Humanos</option>
+                                <option value="Gerencia">Gerencia</option>
+                                <option value="Producción">Producción</option>
+                                <option value="Contabilidad">Contabilidad</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; width: 100%;">
+                    <button type="submit" id="btnCrearUsuario" style="width: 100%; background: #c8102e; color: white; border: none; padding: 0.9rem; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">
+                        Crear Cuenta de Usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
-        const API_BASE = 'http://localhost:3000';
+        const API_BASE = window.location.origin;
         const API_DOCUMENTOS = `${API_BASE}/documents`;   
         const AREAS_BASE = ['Contabilidad', 'Producción', 'Recursos Humanos'];
-        const POR_PAGINA = 8;
+        const POR_PAGINA = 6;
+        // Deben coincidir con src/documents/upload.config.ts (el backend es quien valida de verdad)
+        const EXT_PERMITIDAS = ['pdf','doc','docx','xls','xlsx','ppt','pptx','csv','jpg','jpeg','png','webp'];
+        const TAMANO_MAX_MB = 35;
+
+        async function mensajeError(res, porDefecto) {
+            try {
+                const data = await res.json();
+                const m = Array.isArray(data.message) ? data.message.join(' ') : data.message;
+                return m || porDefecto;
+            } catch { return porDefecto; }
+        }
         const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
         const estado = {
-            docs: [], area: 'Todos', q: '', anio: '', mes: '',
+            docs: [], area: 'Todos', q: '', desde: '', hasta: '',
             orden: 'fecha', dir: 'desc', pagina: 1, cargando: true, error: false
         };
 
         let sesion = null;
 
         const $ = (id) => document.getElementById(id);
-
         const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
         const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
         const slug = (s) => norm(s).trim().replace(/\s+/g, '-');
-
         const pad = (n) => String(n).padStart(2, '0');
+
+        function normalizarDepartamento(nombre) {
+            if (!nombre) return 'General';
+            const str = String(nombre).toLowerCase();
+            if (str.includes('produc')) return 'Producción';
+            if (str.includes('recursos') || str.includes('rrhh')) return 'Recursos Humanos';
+            if (str.includes('contabilid')) return 'Contabilidad';
+            if (str.includes('ventas')) return 'Ventas';
+            if (str.includes('gerencia')) return 'Gerencia';
+            return nombre;
+        }
 
         function parseFecha(v) {
             if (!v) return null;
             const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(v));
             if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+            // 'YYYY-MM-DD' sin hora: se arma en hora local (new Date() lo tomaría como UTC y restaría un día)
+            const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v));
+            if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
             const d = new Date(v);
             return isNaN(d) ? null : d;
         }
+
+        function hoyISO() {
+            const d = new Date();
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+
+        const mismoDia = (a, b) => !!a && !!b && a.toDateString() === b.toDateString();
 
         const fmtFecha = (d) => d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : '—';
 
@@ -219,7 +328,6 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
         }
 
-        
         function leerSesion() {
             const raw = localStorage.getItem('usuarioActiva');
             if (!raw) return null;
@@ -230,6 +338,7 @@
                     return {
                         nombre: u.nombre || u.correo || 'Usuario',
                         rol: u.rol || '',
+                        departamento: u.departamento || 'General',
                         token: obj.token || u.token || localStorage.getItem('token') || ''
                     };
                 }
@@ -244,28 +353,30 @@
         function cerrarSesion() {
             localStorage.removeItem('usuarioActiva');
             localStorage.removeItem('token');
-            window.location.href = 'login.html';
+            window.location.replace('login.html');
         }
 
         function pintarUsuario() {
             const primerNombre = sesion.nombre.split(' ')[0];
             $('userNameDisplay').textContent = sesion.nombre;
-            $('userAvatar').textContent = iniciales(sesion.nombre);
-            $('userRoleDisplay').textContent = sesion.rol ? sesion.rol.charAt(0) + sesion.rol.slice(1).toLowerCase() : '';
+            $('userAvatar').textContent = iniciales(sesion.nombre);$('userRoleDisplay').textContent = sesion.rol ? sesion.rol.charAt(0) + sesion.rol.slice(1).toLowerCase() : '';
             $('saludo').textContent = `Hola, ${primerNombre}`;
         }
 
         function normalizarDoc(d) {
-    const fecha = parseFecha(d.fecha || d.createdAt || d.fechaSubida);
-    return {
-        id: d.id,
-        nombre: d.nombre || d.originalname || d.filename || d.name || '__',
-        subidoPor: d.subidoPor || (d.usuario && d.usuario.nombre) || (d.user && d.user.nombre) || '—',
-        departamento: d.departamento || d.area || 'General',
-        fecha,
-        url: d.url || d.path || d.urlArchivo || d.enlace || (d.filename ? `http://localhost:3000/uploads/${d.filename}` : '')
-    };
-}
+            // fecha = fecha real del documento (o la de subida si no tiene); fechaSubida = registro en el servidor
+            const fecha = parseFecha(d.fecha || d.createdAt || d.fechaSubida);
+            const fechaSubida = parseFecha(d.fechaSubida || d.createdAt) || fecha;
+            return {
+                id: d.id,
+                nombre: d.nombre || d.originalname || d.filename || d.name || '__',
+                subidoPor: d.subidoPor || (d.usuario && d.usuario.nombre) || (d.user && d.user.nombre) || '—',
+                departamento: normalizarDepartamento(d.departamento || d.area),
+                fecha,
+                fechaSubida,
+                url: d.url || d.path || d.urlArchivo || d.enlace || (d.filename ? `http://localhost:3000/uploads/${d.filename}` : '')
+            };
+        }
 
         async function cargar() {
             estado.cargando = true; estado.error = false;
@@ -286,52 +397,56 @@
             render();
         }
 
-
-
-        
         function areasDisponibles() {
             const extra = estado.docs.map(d => d.departamento).filter(a => a && !AREAS_BASE.includes(a));
             return [...AREAS_BASE, ...new Set(extra)];
         }
 
-        function prepararFiltros() {
-            const anios = [...new Set(estado.docs.map(d => d.fecha && d.fecha.getFullYear()).filter(Boolean))].sort((a, b) => b - a);
-            $('filtroAnio').innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
-            $('filtroMes').innerHTML = '<option value="">Todos los meses</option>' + MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-            $('filtroAnio').value = estado.anio;
-            $('filtroMes').value = estado.mes;
-            $('selectArea').innerHTML = areasDisponibles().map(a => `<option>${esc(a)}</option>`).join('');
-        }
+function prepararFiltros() {
+    $('filtroDesde').value = estado.desde;
+    $('filtroHasta').value = estado.hasta;
+    $('selectArea').innerHTML = areasDisponibles().map(a => `<option>${esc(a)}</option>`).join('');
+}
 
-        function filtrados() {
-            const q = norm(estado.q).trim();
-            let lista = estado.docs.filter(d => {
-                if (estado.area !== 'Todos' && d.departamento !== estado.area) return false;
-                if (q && !norm(d.nombre).includes(q)) return false;
-                if (estado.anio && (!d.fecha || d.fecha.getFullYear() !== +estado.anio)) return false;
-                if (estado.mes !== '' && (!d.fecha || d.fecha.getMonth() !== +estado.mes)) return false;
-                return true;
-            });
-            const dir = estado.dir === 'asc' ? 1 : -1;
-            lista.sort((a, b) => {
-                if (estado.orden === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
-                return dir * ((a.fecha ? a.fecha.getTime() : 0) - (b.fecha ? b.fecha.getTime() : 0));
-            });
-            return lista;
-        }
+function filtrados() {
+    const q = norm(estado.q).trim();
+    
+    // Fechas en formato Objeto Date para comparación
+    const dDesde = estado.desde ? new Date(estado.desde + 'T00:00:00') : null;
+    const dHasta = estado.hasta ? new Date(estado.hasta + 'T23:59:59') : null;
+
+    let lista = estado.docs.filter(d => {
+        if (estado.area !== 'Todos' && d.departamento !== estado.area) return false;
+        if (q && !norm(d.nombre).includes(q)) return false;
+        
+        // Filtro por rango de fechas (Desde - Hasta)
+        if (dDesde && (!d.fecha || d.fecha < dDesde)) return false;
+        if (dHasta && (!d.fecha || d.fecha > dHasta)) return false;
+        
+        return true;
+    });
+
+    const dir = estado.dir === 'asc' ? 1 : -1;
+    lista.sort((a, b) => {
+        if (estado.orden === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+        return dir * ((a.fecha ? a.fecha.getTime() : 0) - (b.fecha ? b.fecha.getTime() : 0));
+    });
+    return lista;
+}
 
         function pintarResumen() {
             const docs = estado.docs;
             if (!docs.length) {
                 ['statTotal', 'statReciente'].forEach(id => $(id).textContent = '0');
-                $('statArea').textContent = '–'; $('statUltimo').textContent = '–';
+                $('statArea').textContent = '–';$('statUltimo').textContent = '–';
                 ['statTotalSub', 'statAreaSub', 'statUltimoSub'].forEach(id => $(id).innerHTML = '&nbsp;');
                 return;
             }
             const hace30 = Date.now() - 30 * 86400000;
             $('statTotal').textContent = docs.length;
             $('statTotalSub').textContent = `en ${new Set(docs.map(d => d.departamento).filter(Boolean)).size} áreas`;
-            $('statReciente').textContent = docs.filter(d => d.fecha && d.fecha.getTime() >= hace30).length;
+            // Estas dos tarjetas hablan de cuándo se SUBIÓ el archivo, no de la fecha del documento
+            $('statReciente').textContent = docs.filter(d => d.fechaSubida && d.fechaSubida.getTime() >= hace30).length;
 
             const conteo = {};
             docs.forEach(d => { if (d.departamento) conteo[d.departamento] = (conteo[d.departamento] || 0) + 1; });
@@ -339,10 +454,11 @@
             $('statArea').textContent = top ? top[0] : '–';
             $('statAreaSub').textContent = top ? `${top[1]} archivos` : '';
 
-            const ultimo = [...docs].sort((a, b) => (b.fecha ? b.fecha.getTime() : 0) - (a.fecha ? a.fecha.getTime() : 0))[0];
+            const ultimo = [...docs].sort((a, b) =>
+                (b.fechaSubida ? b.fechaSubida.getTime() : 0) - (a.fechaSubida ? a.fechaSubida.getTime() : 0) || b.id - a.id)[0];
             $('statUltimo').textContent = ultimo.nombre;
             $('statUltimo').title = ultimo.nombre;
-            $('statUltimoSub').textContent = `${ultimo.subidoPor} · ${fmtFecha(ultimo.fecha)}`;
+            $('statUltimoSub').textContent = `${ultimo.subidoPor} · ${fmtFecha(ultimo.fechaSubida)}`;
         }
 
         function pintarTabs() {
@@ -372,14 +488,14 @@
             pintarTabs();
             pintarEncabezadosOrden();
             pintarResumen();
-            $('btnLimpiar').hidden = !(estado.q || estado.anio || estado.mes !== '');
+            $('btnLimpiar').hidden = !(estado.q || estado.desde || estado.hasta);
+            
 
             if (estado.cargando) {
                 tbody.innerHTML = Array.from({ length: 5 }, () =>
                     `<tr class="skeleton"><td><div style="width:70%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td><div style="width:60%"></div></td><td><div style="width:40%"></div></td></tr>`).join('');
                 pintarEstado('');
-                $('contadorArchivos').innerHTML = '&nbsp;';
-                $('paginacion').innerHTML = '';
+                $('contadorArchivos').innerHTML = '&nbsp;';$('paginacion').innerHTML = '';
                 return;
             }
 
@@ -390,10 +506,8 @@
                     <p>Revisa que la API esté encendida y vuelve a intentarlo.</p>
                     <div class="state-actions">
                         <button type="button" class="btn-primary" id="btnReintentar">Reintentar</button>
-                        <button type="button" class="btn-ghost" id="btnEjemplo">Ver datos de ejemplo</button>
                     </div></div>`);
-                $('contadorArchivos').innerHTML = '&nbsp;';
-                $('paginacion').innerHTML = '';
+                $('contadorArchivos').innerHTML = '&nbsp;';$('paginacion').innerHTML = '';
                 return;
             }
 
@@ -405,7 +519,7 @@
 
             if (!visibles.length) {
                 tbody.innerHTML = '';
-                const hayFiltros = estado.q || estado.anio || estado.mes !== '' || estado.area !== 'Todos';
+                const hayFiltros = estado.q || estado.desde || estado.hasta || estado.area !== 'Todos';
                 pintarEstado(hayFiltros
                     ? `<div class="state">${ICONO_VACIO}<h3>No encontramos documentos</h3><p>Prueba con otro nombre, otra área o quita los filtros de fecha.</p></div>`
                     : `<div class="state">${ICONO_VACIO}<h3>Aún no hay documentos</h3><p>Sube el primer archivo para empezar a organizar la documentación.</p><div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivo</button></div></div>`);
@@ -415,22 +529,30 @@
             }
 
             pintarEstado('');
+            // Evaluar el rol del usuario conectado
+            const rolSesion = (sesion && sesion.rol ? sesion.rol : '').toLowerCase().trim();
+            const esAdmin = (rolSesion === 'admin' || rolSesion === 'administrador');
+
             tbody.innerHTML = visibles.map(d => {
                 const t = tipoArchivo(d.nombre);
                 const rel = relativo(d.fecha);
-            const accionAbrir = d.url
-                ? `<a class="action-link" href="${esc(d.url)}" target="_blank" rel="noopener">Abrir</a>`
-                : `<button type="button" class="action-link" data-sin-url>Abrir</button>`;
+            
+                const accionDescargar = `<button type="button" class="action-link" style="color: var(--blue);" data-descargar="${d.id}" data-nombre="${esc(d.nombre)}">Descargar</button>`;
+                
+                // El botón Eliminar solo se dibuja si el usuario es Administrador
+                const accionEliminar = esAdmin 
+                    ? `<button type="button" class="action-link is-danger" data-eliminar="${d.id}">Eliminar</button>` 
+                    : '';
 
-            const accionEliminar = `<button type="button" class="action-link is-danger" data-eliminar="${d.id}">Eliminar</button>`;
-
-            const accion = `<div style="display:flex; gap:12px;">${accionAbrir} ${accionEliminar}</div>`;
+                const accion = `<div style="display:flex; gap:12px;"> ${accionDescargar} ${accionEliminar}</div>`;
                 return `
                 <tr>
                     <td><div class="file-cell"><span class="file-ico ${t.clase}" aria-hidden="true">${esc(t.ext)}</span><span class="file-name">${resaltar(d.nombre, estado.q)}</span></div></td>
                     <td class="col-hide-sm">${d.departamento ? `<span class="chip a-${slug(d.departamento)}">${esc(d.departamento)}</span>` : '—'}</td>
                     <td class="col-hide-sm"><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(d.subidoPor))}</span>${esc(d.subidoPor)}</div></td>
-                    <td class="date">${fmtFecha(d.fecha)}${rel ? `<small>${rel}</small>` : ''}</td>
+                    <td class="date">${fmtFecha(d.fecha)}${
+                        !mismoDia(d.fecha, d.fechaSubida) ? `<small>Subido el ${fmtFecha(d.fechaSubida)}</small>`
+                        : rel ? `<small>${rel}</small>` : ''}</td>
                     <td>${accion}</td>
                 </tr>`;
             }).join('');
@@ -457,11 +579,31 @@
         const modal = $('modalSubir');
         const inputArchivo = $('inputArchivo');
 
-        function abrirModal() {
-            $('formSubir').reset();
-            textoDrop();
-            modal.showModal();
+function abrirModal() {
+    $('formSubir').reset();
+    $('inputFechaDocumento').max = hoyISO();
+    textoDrop();
+
+    const selectArea = $('selectArea');
+    const rol = (sesion.rol || '').toLowerCase().trim();
+    const esAdmin = (rol === 'admin' || rol === 'administrador');
+
+    if (esAdmin) {
+        
+        const areas = areasDisponibles();
+        selectArea.innerHTML = areas.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+        if (areas.includes(sesion.departamento)) {
+            selectArea.value = sesion.departamento;
         }
+        selectArea.disabled = false;
+    } else {
+               selectArea.innerHTML = `<option value="${esc(sesion.departamento)}">${esc(sesion.departamento)}</option>`;
+        selectArea.value = sesion.departamento;
+        selectArea.disabled = true;
+    }
+
+    modal.showModal();
+}
 
         function cerrarModal() { modal.close(); }
 
@@ -473,37 +615,164 @@
         }
 
         async function subir(e) {
-    e.preventDefault();
-    const file = inputArchivo.files[0];
-    if (!file) { aviso('Elige un archivo antes de subirlo.'); return; }
+            e.preventDefault();
+            const file = inputArchivo.files[0];
+            if (!file) { aviso('Elige un archivo antes de subirlo.'); return; }
 
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('departamento', $('selectArea').value); 
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            if (!file.name.includes('.') || !EXT_PERMITIDAS.includes(ext)) {
+                aviso(`Formato no permitido. Usa: ${EXT_PERMITIDAS.join(', ')}.`);
+                return;
+            }
+            if (file.size > TAMANO_MAX_MB * 1024 * 1024) {
+                aviso(`El archivo pesa ${(file.size / 1048576).toFixed(1)} MB. El máximo es ${TAMANO_MAX_MB} MB.`);
+                return;
+            }
 
-    const btn = $('btnEnviar');
-    btn.disabled = true; btn.textContent = 'Subiendo…';
-    try {
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('departamento', $('selectArea').value);
+
+            // Fecha real del documento (opcional). Si no se envía, el backend usa la fecha de hoy.
+            const fechaDocumento = $('inputFechaDocumento').value; // 'YYYY-MM-DD' o ''
+            if (fechaDocumento) {
+                if (fechaDocumento > hoyISO()) { aviso('La fecha del documento no puede ser posterior a hoy.'); return; }
+                fd.append('fechaDocumento', fechaDocumento);
+            }
+
+            const btn = $('btnEnviar');
+            btn.disabled = true; btn.textContent = 'Subiendo…';
+            try {
+                const res = await fetch(`${API_DOCUMENTOS}/upload`, { method: 'POST', headers: authHeaders(), body: fd });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) {
+                    aviso(await mensajeError(res, 'No se pudo subir el archivo. Inténtalo de nuevo.'));
+                    return;
+                }
+                cerrarModal();
+                aviso('Archivo subido correctamente.', true);
+                await cargar();
+            } catch (err) {
+                console.error(err);
+                aviso('No se pudo conectar con el servidor para subir el archivo.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Subir archivo';
+            }
+        }
+
+        async function eliminarDocumento(id) {
+            if (!id || id === 'undefined') {
+                aviso('No se encontró el ID del documento.');
+                return;
+            }
+            if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
+
+            try {
+                const res = await fetch(`${API_DOCUMENTOS}/${id}`, {
+                    method: 'DELETE',
+                    headers: authHeaders(),
+                });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) {
+                    aviso(await mensajeError(res, 'No se pudo eliminar el documento.'));
+                    return;
+                }
+
+                aviso('Documento eliminado correctamente.', true);
+                await cargar();
+            } catch (err) {
+                console.error(err);
+                aviso('No se pudo eliminar el documento.');
+            }
+        }    
+
+        async function descargarDocumento(id, nombreReal) {
+            aviso('Iniciando descarga...', true);
+            try {
+                const res = await fetch(`${API_DOCUMENTOS}/${id}/download`, {
+                    method: 'GET',
+                    headers: authHeaders(),
+                });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) throw new Error('Error al descargar');
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = nombreReal;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (err) {
+                console.error(err);
+                aviso('Error al intentar descargar el archivo.');
+            }
+        }
+
         
-        const res = await fetch(`${API_DOCUMENTOS}/upload`, { method: 'POST', headers: authHeaders(), body: fd });
-        if (res.status === 401) { cerrarSesion(); return; }
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        cerrarModal();
-        aviso('Archivo subido correctamente.', true);
-        await cargar();
-    } catch (err) {
-        console.error(err);
-        aviso('No se pudo subir el archivo. Inténtalo de nuevo.');
+        function abrirModalAdmin() {
+            $('modalAdmin').style.display = 'flex';
+        }
+
+        function cerrarModalAdmin() {
+            $('modalAdmin').style.display = 'none';$('formCrearUsuario').reset();
+        }
+
+async function registrarEmpleado(event) {
+    event.preventDefault();
+
+    const nombre = $('regNombre').value.trim();
+    const correo = $('regCorreo').value.trim();
+    const contrasena = $('regClave').value;
+    const departamento = $('regDepartamento').value;
+    const rol = $('regRol').value;
+
+    // Validación rápida local en el navegador
+    const regexClave = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!regexClave.test(contrasena)) {
+        alert('La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y al menos un número.');
+        return;
+    }
+
+    const btn = $('btnCrearUsuario');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+        const res = await fetch(`${API_BASE}/usuarios/crear`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sesion.token}`
+            },
+            body: JSON.stringify({ nombre, correo, contrasena, departamento, rol })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.message || 'Ocurrió un error al registrar el usuario.');
+            return;
+        }
+
+        alert(`¡Usuario ${nombre} creado con éxito!`);
+        cerrarModalAdmin();
+
+    } catch (error) {
+        console.error('Error al registrar usuario:', error);
+        alert('Error de conexión con el servidor.');
     } finally {
-        btn.disabled = false; btn.textContent = 'Subir archivo';
+        btn.disabled = false;
+        btn.textContent = 'Crear Cuenta de Usuario';
     }
 }
 
         function conectarEventos() {
             $('btnCerrarSesion').addEventListener('click', cerrarSesion);
-            $('btnSubirArchivo').addEventListener('click', abrirModal);
-            $('btnSubirArchivo2').addEventListener('click', abrirModal);
-            $('btnVerDocumentos').addEventListener('click', () => $('panel').scrollIntoView({ behavior: 'smooth' }));
+            $('btnSubirArchivo').addEventListener('click', abrirModal);$('btnSubirArchivo2').addEventListener('click', abrirModal);
 
             $('tabs').addEventListener('click', (e) => {
                 const b = e.target.closest('.tab'); if (!b) return;
@@ -516,12 +785,30 @@
                 debounce = setTimeout(() => { estado.q = e.target.value; estado.pagina = 1; render(); }, 180);
             });
 
-            $('filtroAnio').addEventListener('change', (e) => { estado.anio = e.target.value; estado.pagina = 1; render(); });
-            $('filtroMes').addEventListener('change', (e) => { estado.mes = e.target.value; estado.pagina = 1; render(); });
+            const aplicarRangoFechas = () => {
+                let desde = $('filtroDesde').value;
+                let hasta = $('filtroHasta').value;
+                // Si el usuario invierte el rango, se intercambian las fechas
+                if (desde && hasta && desde > hasta) {
+                    [desde, hasta] = [hasta, desde];
+                    $('filtroDesde').value = desde;
+                    $('filtroHasta').value = hasta;
+                }
+                estado.desde = desde;
+                estado.hasta = hasta;
+                $('filtroHasta').min = desde || '';
+                $('filtroDesde').max = hasta || '';
+                estado.pagina = 1;
+                render();
+            };
+            $('filtroDesde').addEventListener('change', aplicarRangoFechas);
+            $('filtroHasta').addEventListener('change', aplicarRangoFechas);
 
             $('btnLimpiar').addEventListener('click', () => {
-                estado.q = ''; estado.anio = ''; estado.mes = ''; estado.pagina = 1;
-                $('buscador').value = ''; $('filtroAnio').value = ''; $('filtroMes').value = '';
+                estado.q = ''; estado.desde = ''; estado.hasta = ''; estado.pagina = 1;
+                $('buscador').value = '';
+                $('filtroDesde').value = ''; $('filtroHasta').value = '';
+                $('filtroDesde').max = ''; $('filtroHasta').min = '';
                 render();
             });
 
@@ -539,21 +826,24 @@
                 $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
 
-document.querySelector('.panel').addEventListener('click', (e) => {
-    const btnEliminar = e.target.closest('[data-eliminar]');
-    if (btnEliminar) {
-        eliminarDocumento(btnEliminar.dataset.eliminar);
-        return;
-    }
+            document.querySelector('.panel').addEventListener('click', (e) => {
+                const btnEliminar = e.target.closest('[data-eliminar]');
+                if (btnEliminar) {
+                    eliminarDocumento(btnEliminar.dataset.eliminar);
+                    return;
+                }
 
-    if (e.target.closest('#btnReintentar')) cargar();
-    else if (e.target.closest('#btnEjemplo')) datosDeEjemplo();
-    else if (e.target.closest('[data-abrir-modal]')) abrirModal();
-    else if (e.target.closest('[data-sin-url]')) aviso('Este documento todavía no tiene enlace. Revisa que la API devuelva el campo "url".');
-});
+                const btnDescargar = e.target.closest('[data-descargar]');
+                if (btnDescargar) {
+                    descargarDocumento(btnDescargar.dataset.descargar, btnDescargar.dataset.nombre);
+                    return;
+                }
 
-            $('btnCerrarModal').addEventListener('click', cerrarModal);
-            $('btnCancelarSubida').addEventListener('click', cerrarModal);
+                if (e.target.closest('#btnReintentar')) cargar();
+                else if (e.target.closest('[data-abrir-modal]')) abrirModal();
+            });
+
+            $('btnCerrarModal').addEventListener('click', cerrarModal);$('btnCancelarSubida').addEventListener('click', cerrarModal);
             modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
             $('formSubir').addEventListener('submit', subir);
             inputArchivo.addEventListener('change', textoDrop);
@@ -566,39 +856,24 @@ document.querySelector('.panel').addEventListener('click', (e) => {
             });
         }
 
+        
         document.addEventListener('DOMContentLoaded', () => {
             sesion = leerSesion();
             if (!sesion) { window.location.href = 'login.html'; return; }
+            
             pintarUsuario();
+
+            
+            const rol = (sesion.rol || '').toLowerCase().trim();
+            if (rol === 'admin' || rol === 'administrador') {
+                const btnAdmin = $('btnGestionAdmin');
+                if (btnAdmin) btnAdmin.style.display = 'inline-block';
+            }
+
             conectarEventos();
             prepararFiltros();
             cargar();
         });
-
-    async function eliminarDocumento(id) {
-    if (!id || id === 'undefined') {
-        aviso('No se encontró el ID del documento.');
-        return;
-    }
-
-    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
-
-    try {
-        const res = await fetch(`${API_DOCUMENTOS}/${id}`, {
-            method: 'DELETE',
-            headers: authHeaders(),
-        });
-
-        if (res.status === 401) { cerrarSesion(); return; }
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-
-        aviso('Documento eliminado correctamente.', true);
-        await cargar();
-    } catch (err) {
-        console.error(err);
-        aviso('No se pudo eliminar el documento.');
-    }
-}    
     </script>
 </body>
 </html>
