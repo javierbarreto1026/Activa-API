@@ -43,7 +43,7 @@
                     <input type="file" id="fileInput" accept=".pdf, .jpg, .png, .xlsx">
                 </div>
 
-                <button type="submit" class="btn-primary btn-upload">Subir a AWS S3</button>
+                <button type="submit" class="btn-primary btn-upload">Subir documento</button>
             </form>
         </div>
     </div>
@@ -62,7 +62,7 @@
 
         document.getElementById('uploadForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            alert("Próximamente: Este botón enviará el archivo a NestJS y lo guardará en AWS S3.");
+            alert("Próximamente: Este botón enviará el archivo a NestJS y lo guardará en Cloudflare R2.");
         });
     </script>
     <script>

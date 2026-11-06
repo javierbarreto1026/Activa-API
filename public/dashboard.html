@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d0d0d">
     <title>Documentos | Activa Uniformes</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="dashboard.css">
 
     <script>
-        
+
         if (!localStorage.getItem('token')) {
             window.location.replace('login.html');
         }
 
-        
+
         window.history.pushState(null, "", window.location.href);
         window.onpopstate = function () {
             window.history.pushState(null, "", window.location.href);
@@ -26,14 +28,14 @@
     <header>
         <nav class="navbar" aria-label="Principal">
             <a class="brand" href="dashboard.html" aria-label="Activa Uniformes, inicio">
-                <span class="brand-mark" aria-hidden="true">A</span>
+                <img class="brand-mark" src="favicon.svg" alt="" width="38" height="38">
                 <span class="brand-text"><strong>ACTIVA</strong><span>UNIFORMES</span></span>
             </a>
 
             <div class="nav-right">
                 <div class="nav-links">
                     <button type="button" class="nav-link" id="btnSubirArchivo">Subir archivo</button>
-                    
+
                     <button type="button" class="nav-link" id="btnGestionAdmin" style="display: none;" onclick="abrirModalAdmin()">Gestión de Usuarios</button>
                 </div>
 
@@ -54,6 +56,7 @@
 
         <div class="page-head">
             <div>
+                <span class="eyebrow">Portal de gestión documental</span>
                 <h1 id="saludo">Documentos</h1>
                 <p>Consulta, busca y sube los archivos de cada área de la empresa.</p>
             </div>
@@ -65,24 +68,36 @@
 
         <section class="summary" aria-label="Resumen" id="resumen">
             <div class="summary-item">
-                <div class="summary-label">Documentos en total</div>
-                <div class="summary-value" id="statTotal">–</div>
-                <div class="summary-sub" id="statTotalSub">&nbsp;</div>
+                <span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+                <div class="summary-body">
+                    <div class="summary-label">Documentos en total</div>
+                    <div class="summary-value" id="statTotal">–</div>
+                    <div class="summary-sub" id="statTotalSub">&nbsp;</div>
+                </div>
             </div>
             <div class="summary-item">
-                <div class="summary-label">Subidos en los últimos 30 días</div>
-                <div class="summary-value" id="statReciente">–</div>
-                <div class="summary-sub">&nbsp;</div>
+                <span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                <div class="summary-body">
+                    <div class="summary-label">Subidos en los últimos 30 días</div>
+                    <div class="summary-value" id="statReciente">–</div>
+                    <div class="summary-sub">&nbsp;</div>
+                </div>
             </div>
             <div class="summary-item">
-                <div class="summary-label">Área con más archivos</div>
-                <div class="summary-value is-text" id="statArea">–</div>
-                <div class="summary-sub" id="statAreaSub">&nbsp;</div>
+                <span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+                <div class="summary-body">
+                    <div class="summary-label">Área con más archivos</div>
+                    <div class="summary-value is-text" id="statArea">–</div>
+                    <div class="summary-sub" id="statAreaSub">&nbsp;</div>
+                </div>
             </div>
             <div class="summary-item">
-                <div class="summary-label">Último archivo subido</div>
-                <div class="summary-value is-text" id="statUltimo" title="">–</div>
-                <div class="summary-sub" id="statUltimoSub">&nbsp;</div>
+                <span class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></span>
+                <div class="summary-body">
+                    <div class="summary-label">Último archivo subido</div>
+                    <div class="summary-value is-text" id="statUltimo" title="">–</div>
+                    <div class="summary-sub" id="statUltimoSub">&nbsp;</div>
+                </div>
             </div>
         </section>
 
@@ -91,13 +106,13 @@
             <div class="tabs" role="tablist" id="tabs" aria-label="Áreas"></div>
 
             <div class="toolbar">
-                <div class="filters" style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="filters">
                     <span class="filters-label">Fecha del documento</span>
                     <label for="filtroDesde" class="sr-only">Desde</label>
-                    <input type="date" id="filtroDesde" title="Fecha desde" style="padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;">
-                    <span style="color: #666; font-size: 0.85rem; font-weight: 600;">a</span>
+                    <input type="date" id="filtroDesde" title="Fecha desde">
+                    <span class="filters-sep">a</span>
                     <label for="filtroHasta" class="sr-only">Hasta</label>
-                    <input type="date" id="filtroHasta" title="Fecha hasta" style="padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;">
+                    <input type="date" id="filtroHasta" title="Fecha hasta">
                     <button type="button" class="btn-ghost" id="btnLimpiar" hidden>Quitar filtros</button>
                 </div>
 
@@ -114,7 +129,7 @@
                         <tr>
                             <th scope="col" aria-sort="none" data-col="nombre"><button type="button" class="sort" data-sort="nombre">Nombre del archivo <span class="sort-arrow" aria-hidden="true">▲</span></button></th>
                             <th scope="col" class="col-hide-sm">Área</th>
-                            <th scope="col" class="col-hide-sm">Subido por</th>
+                            <th scope="col" class="col-hide-md">Subido por</th>
                             <th scope="col" aria-sort="descending" data-col="fecha"><button type="button" class="sort" data-sort="fecha">Fecha del documento <span class="sort-arrow" aria-hidden="true">▼</span></button></th>
                             <th scope="col">Acciones</th>
                         </tr>
@@ -129,18 +144,23 @@
                 <div class="pagination-buttons" id="paginacion"></div>
             </div>
         </section>
+
+        <p class="page-foot">© <span id="anio">2026</span> Activa Uniformes · Cúcuta, Colombia</p>
     </main>
 
-    
+
     <dialog id="modalSubir" aria-labelledby="modalTitulo">
         <form id="formSubir" method="dialog">
             <div class="modal-head">
-                <h2 id="modalTitulo">Subir archivo</h2>
+                <div>
+                    <h2 id="modalTitulo">Subir archivo</h2>
+                    <p class="modal-sub">Formatos permitidos: PDF, Word, Excel, PowerPoint, CSV e imágenes (hasta 35 MB).</p>
+                </div>
                 <button type="button" class="modal-close" id="btnCerrarModal" aria-label="Cerrar">×</button>
             </div>
             <div class="modal-body">
                 <div class="dropzone" id="dropzone">
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+                    <span class="dropzone-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></span>
                     <p id="dropTexto"><strong>Arrastra el archivo aquí</strong><br>o <label class="pick" for="inputArchivo">búscalo en tu equipo</label></p>
                     <input type="file" id="inputArchivo" class="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.jpg,.jpeg,.png,.webp">
                 </div>
@@ -164,66 +184,74 @@
         </form>
     </dialog>
 
-  
-    <div id="modalAdmin" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-        <div style="background: #ffffff; padding: 2.5rem; border-radius: 12px; width: 90%; max-width: 600px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-            
-            <span onclick="cerrarModalAdmin()" style="position: absolute; top: 15px; right: 20px; font-size: 1.8rem; cursor: pointer; color: #999;">&times;</span>
-            
-            <div style="margin-bottom: 1.5rem; text-align: center;">
-                <h2 style="color: #c8102e; margin: 0 0 0.5rem 0; font-size: 1.5rem;">Gestión de Personal</h2>
-                <p style="color: #666; font-size: 0.95rem; margin: 0;">Registra una nueva cuenta de empleado</p>
+
+    <dialog id="modalAdmin" aria-labelledby="adminTitulo">
+        <form id="formCrearUsuario" onsubmit="registrarEmpleado(event)">
+            <div class="modal-head">
+                <div>
+                    <h2 id="adminTitulo">Gestión de personal</h2>
+                    <p class="modal-sub">Registra una nueva cuenta de empleado.</p>
+                </div>
+                <button type="button" class="modal-close" onclick="cerrarModalAdmin()" aria-label="Cerrar">×</button>
             </div>
-
-            <form id="formCrearUsuario" onsubmit="registrarEmpleado(event)">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                        <div>
-                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Nombre completo</label>
-                            <input type="text" id="regNombre" required placeholder="Ej. Karla Gómez" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
-                        </div>
-                        <div>
-                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Contraseña inicial</label>
-                            <input type="text" id="regClave" required placeholder="••••••••" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
-                        </div>
-                        <div>
-                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Rol en el sistema</label>
-                            <select id="regRol" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
-                                <option value="usuario">Usuario normal</option>
-                                <option value="admin">Administrador</option>
-                            </select>
-                        </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="field">
+                        <label for="regNombre">Nombre completo</label>
+                        <input type="text" id="regNombre" required placeholder="Ej. Karla Gómez" autocomplete="off">
                     </div>
-
-                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                        <div>
-                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Correo corporativo</label>
-                            <input type="email" id="regCorreo" required placeholder="karla@empresa.com" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
-                        </div>
-                        <div>
-                            <label style="font-weight: 700; font-size: 0.85rem; color: #333;">Departamento</label>
-                            <select id="regDepartamento" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 0.3rem;">
-                                <option value="">Selecciona...</option>
-                                <option value="Ventas">Ventas</option>
-                                <option value="Recursos Humanos">Recursos Humanos</option>
-                                <option value="Gerencia">Gerencia</option>
-                                <option value="Producción">Producción</option>
-                                <option value="Contabilidad">Contabilidad</option>
-                            </select>
-                        </div>
+                    <div class="field">
+                        <label for="regCorreo">Correo corporativo</label>
+                        <input type="email" id="regCorreo" required placeholder="karla@empresa.com" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="regDepartamento">Departamento</label>
+                        <select id="regDepartamento" required>
+                            <option value="">Selecciona...</option>
+                            <option value="Ventas">Ventas</option>
+                            <option value="Recursos Humanos">Recursos Humanos</option>
+                            <option value="Gerencia">Gerencia</option>
+                            <option value="Producción">Producción</option>
+                            <option value="Contabilidad">Contabilidad</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="regRol">Rol en el sistema</label>
+                        <select id="regRol" required>
+                            <option value="usuario">Usuario normal</option>
+                            <option value="admin">Administrador</option>
+                        </select>
                     </div>
                 </div>
 
-                <div style="margin-top: 2rem; width: 100%;">
-                    <button type="submit" id="btnCrearUsuario" style="width: 100%; background: #c8102e; color: white; border: none; padding: 0.9rem; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">
-                        Crear Cuenta de Usuario
-                    </button>
+                <div class="field">
+                    <label for="regClave">Contraseña inicial</label>
+                    <input type="text" id="regClave" required placeholder="Mínimo 8 caracteres" autocomplete="off" aria-describedby="ayudaClave">
+                    <small class="field-hint" id="ayudaClave">Debe incluir mayúsculas, minúsculas y al menos un número.</small>
                 </div>
-            </form>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-ghost" onclick="cerrarModalAdmin()">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btnCrearUsuario">Crear Cuenta de Usuario</button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+
+    <dialog id="modalConfirmar" class="dialog-sm" aria-labelledby="confirmarTitulo" aria-describedby="confirmarMensaje">
+        <div class="confirm">
+            <span class="confirm-ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></span>
+            <h2 id="confirmarTitulo">Eliminar documento</h2>
+            <p id="confirmarMensaje"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn-ghost" id="btnConfirmarCancel">Cancelar</button>
+                <button type="button" class="btn-danger" id="btnConfirmarOk">Eliminar</button>
+            </div>
         </div>
-    </div>
+    </dialog>
 
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite" popover="manual"></div>
 
     <script>
         const API_BASE = window.location.origin;
@@ -307,6 +335,7 @@
             else if (['xls', 'xlsx', 'csv'].includes(ext)) clase = 't-xls';
             else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) clase = 't-img';
             else if (['doc', 'docx'].includes(ext)) clase = 't-doc';
+            else if (['ppt', 'pptx'].includes(ext)) clase = 't-ppt';
             return { ext: ext.slice(0, 4).toUpperCase() || 'ARCH', clase };
         }
 
@@ -318,15 +347,49 @@
             return esc(nombre.slice(0, i)) + '<mark>' + esc(nombre.slice(i, i + b.length)) + '</mark>' + esc(nombre.slice(i + b.length));
         }
 
+        // El aviso es un "popover" para que quede en la capa superior y se vea
+        // también por encima de los diálogos abiertos (subir archivo, usuarios, confirmar).
         let toastTimer;
         function aviso(texto, ok = false) {
             const t = $('toast');
             t.textContent = texto;
             t.classList.toggle('is-ok', ok);
+            t.classList.remove('show');
+            try {
+                if (t.matches(':popover-open')) t.hidePopover();
+                t.showPopover();
+            } catch { /* navegador sin popover: el aviso se anima igual */ }
+            void t.offsetWidth; // reinicia la transición
             t.classList.add('show');
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
+            toastTimer = setTimeout(() => {
+                t.classList.remove('show');
+                setTimeout(() => {
+                    if (t.classList.contains('show')) return;
+                    try { t.hidePopover(); } catch { /* nada que cerrar */ }
+                }, 300);
+            }, 3800);
         }
+
+        // Diálogo de confirmación propio (reemplaza a window.confirm)
+        function confirmar({ titulo, mensaje, textoOk = 'Eliminar' }) {
+            return new Promise((resolve) => {
+                const dlg = $('modalConfirmar');
+                $('confirmarTitulo').textContent = titulo;
+                $('confirmarMensaje').textContent = mensaje;
+                $('btnConfirmarOk').textContent = textoOk;
+                const fin = (valor) => { resolve(valor); if (dlg.open) dlg.close(); };
+                $('btnConfirmarOk').onclick = () => fin(true);
+                $('btnConfirmarCancel').onclick = () => fin(false);
+                dlg.onclick = (e) => { if (e.target === dlg) fin(false); };
+                dlg.onclose = () => resolve(false); // Escape: si ya se resolvió, no cambia nada
+                dlg.showModal();
+                $('btnConfirmarCancel').focus();
+            });
+        }
+
+        const ICO_DESCARGAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>';
+        const ICO_ELIMINAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
 
         function leerSesion() {
             const raw = localStorage.getItem('usuarioActiva');
@@ -493,7 +556,7 @@ function filtrados() {
 
             if (estado.cargando) {
                 tbody.innerHTML = Array.from({ length: 5 }, () =>
-                    `<tr class="skeleton"><td><div style="width:70%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td><div style="width:60%"></div></td><td><div style="width:40%"></div></td></tr>`).join('');
+                    `<tr class="skeleton"><td><div style="width:70%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td class="col-hide-md"><div style="width:60%"></div></td><td><div style="width:60%"></div></td><td><div style="width:40%"></div></td></tr>`).join('');
                 pintarEstado('');
                 $('contadorArchivos').innerHTML = '&nbsp;';$('paginacion').innerHTML = '';
                 return;
@@ -537,19 +600,19 @@ function filtrados() {
                 const t = tipoArchivo(d.nombre);
                 const rel = relativo(d.fecha);
             
-                const accionDescargar = `<button type="button" class="action-link" style="color: var(--blue);" data-descargar="${d.id}" data-nombre="${esc(d.nombre)}">Descargar</button>`;
-                
+                const accionDescargar = `<button type="button" class="action-link" data-descargar="${d.id}" data-nombre="${esc(d.nombre)}" title="Descargar" aria-label="Descargar ${esc(d.nombre)}">${ICO_DESCARGAR}<span class="act-txt">Descargar</span></button>`;
+
                 // El botón Eliminar solo se dibuja si el usuario es Administrador
-                const accionEliminar = esAdmin 
-                    ? `<button type="button" class="action-link is-danger" data-eliminar="${d.id}">Eliminar</button>` 
+                const accionEliminar = esAdmin
+                    ? `<button type="button" class="action-link is-danger" data-eliminar="${d.id}" title="Eliminar" aria-label="Eliminar ${esc(d.nombre)}">${ICO_ELIMINAR}<span class="act-txt">Eliminar</span></button>`
                     : '';
 
-                const accion = `<div style="display:flex; gap:12px;"> ${accionDescargar} ${accionEliminar}</div>`;
+                const accion = `<div class="actions">${accionDescargar}${accionEliminar}</div>`;
                 return `
                 <tr>
                     <td><div class="file-cell"><span class="file-ico ${t.clase}" aria-hidden="true">${esc(t.ext)}</span><span class="file-name">${resaltar(d.nombre, estado.q)}</span></div></td>
                     <td class="col-hide-sm">${d.departamento ? `<span class="chip a-${slug(d.departamento)}">${esc(d.departamento)}</span>` : '—'}</td>
-                    <td class="col-hide-sm"><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(d.subidoPor))}</span>${esc(d.subidoPor)}</div></td>
+                    <td class="col-hide-md"><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(d.subidoPor))}</span>${esc(d.subidoPor)}</div></td>
                     <td class="date">${fmtFecha(d.fecha)}${
                         !mismoDia(d.fecha, d.fechaSubida) ? `<small>Subido el ${fmtFecha(d.fechaSubida)}</small>`
                         : rel ? `<small>${rel}</small>` : ''}</td>
@@ -571,7 +634,7 @@ function filtrados() {
             $('paginacion').innerHTML =
                 `<button type="button" class="page-btn" data-pag="${p - 1}" ${p === 1 ? 'disabled' : ''}>Anterior</button>` +
                 nums.map(n => n === '…'
-                    ? '<span class="page-btn" style="border:0;background:none;display:grid;place-items:center">…</span>'
+                    ? '<span class="page-gap" aria-hidden="true">…</span>'
                     : `<button type="button" class="page-btn ${n === p ? 'active' : ''}" data-pag="${n}" ${n === p ? 'aria-current="page"' : ''}>${n}</button>`).join('') +
                 `<button type="button" class="page-btn" data-pag="${p + 1}" ${p === total ? 'disabled' : ''}>Siguiente</button>`;
         }
@@ -665,7 +728,13 @@ function abrirModal() {
                 aviso('No se encontró el ID del documento.');
                 return;
             }
-            if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
+            const doc = estado.docs.find(d => String(d.id) === String(id));
+            const ok = await confirmar({
+                titulo: 'Eliminar documento',
+                mensaje: `${doc ? `«${doc.nombre}» se eliminará` : 'El documento se eliminará'} de forma permanente. Esta acción no se puede deshacer.`,
+                textoOk: 'Sí, eliminar'
+            });
+            if (!ok) return;
 
             try {
                 const res = await fetch(`${API_DOCUMENTOS}/${id}`, {
@@ -714,11 +783,12 @@ function abrirModal() {
 
         
         function abrirModalAdmin() {
-            $('modalAdmin').style.display = 'flex';
+            $('formCrearUsuario').reset();
+            $('modalAdmin').showModal();
         }
 
         function cerrarModalAdmin() {
-            $('modalAdmin').style.display = 'none';$('formCrearUsuario').reset();
+            $('modalAdmin').close();
         }
 
 async function registrarEmpleado(event) {
@@ -733,7 +803,7 @@ async function registrarEmpleado(event) {
     // Validación rápida local en el navegador
     const regexClave = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!regexClave.test(contrasena)) {
-        alert('La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y al menos un número.');
+        aviso('La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y al menos un número.');
         return;
     }
 
@@ -754,16 +824,17 @@ async function registrarEmpleado(event) {
         const data = await res.json();
 
         if (!res.ok) {
-            alert(data.message || 'Ocurrió un error al registrar el usuario.');
+            const msg = Array.isArray(data.message) ? data.message.join(' ') : data.message;
+            aviso(msg || 'Ocurrió un error al registrar el usuario.');
             return;
         }
 
-        alert(`¡Usuario ${nombre} creado con éxito!`);
         cerrarModalAdmin();
+        aviso(`¡Usuario ${nombre} creado con éxito!`, true);
 
     } catch (error) {
         console.error('Error al registrar usuario:', error);
-        alert('Error de conexión con el servidor.');
+        aviso('Error de conexión con el servidor.');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Crear Cuenta de Usuario';
@@ -845,6 +916,7 @@ async function registrarEmpleado(event) {
 
             $('btnCerrarModal').addEventListener('click', cerrarModal);$('btnCancelarSubida').addEventListener('click', cerrarModal);
             modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
+            $('modalAdmin').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarModalAdmin(); });
             $('formSubir').addEventListener('submit', subir);
             inputArchivo.addEventListener('change', textoDrop);
 
@@ -860,6 +932,7 @@ async function registrarEmpleado(event) {
         document.addEventListener('DOMContentLoaded', () => {
             sesion = leerSesion();
             if (!sesion) { window.location.href = 'login.html'; return; }
+            $('anio').textContent = new Date().getFullYear();
             
             pintarUsuario();
 

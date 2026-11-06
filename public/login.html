@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d0d0d">
+    <meta name="description" content="Portal de Gestión Documental de Activa Uniformes, Cúcuta, Colombia.">
     <title>Iniciar sesión | Activa Uniformes</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <!-- Fuentes y hoja de estilos externa -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,20 +22,33 @@
 
         <!-- ================= PANEL DE MARCA ================= -->
         <aside class="brand-panel">
-            <div class="brand-panel__inner">
+            <div class="brand-logo">
+                <img class="brand-logo__img" src="favicon.svg" alt="" width="48" height="48">
                 <h1 class="brand-mark">
                     <span class="brand-mark__primary">ACTIVA</span>
                     <span class="brand-mark__secondary">UNIFORMES</span>
                 </h1>
-                <p class="brand-tagline">Portal de Gestión Documental</p>
-                <p class="brand-copy">Centraliza la documentación de Producción, Comercial y Recursos Humanos en un mismo lugar.</p>
             </div>
+
+            <div class="brand-body">
+                <span class="brand-eyebrow">Portal corporativo</span>
+                <p class="brand-tagline">Gestión documental centralizada</p>
+                <p class="brand-copy">Un único lugar para consultar, cargar y descargar la documentación de cada área de la empresa.</p>
+                <ul class="brand-areas">
+                    <li>Producción</li>
+                    <li>Comercial</li>
+                    <li>Recursos Humanos</li>
+                </ul>
+            </div>
+
+            <p class="brand-footer">Cúcuta, Norte de Santander · Colombia</p>
+
             <div class="brand-panel__seam" aria-hidden="true"></div>
         </aside>
 
         <!-- ================= PANEL DE AUTENTICACIÓN ================= -->
         <main class="auth-panel">
-            <div class="auth-panel__inner">
+            <div class="auth-card">
 
                 <!-- ----- Iniciar sesión ----- -->
                 <div id="loginPanel">
@@ -39,15 +57,27 @@
                         <p>Ingresa con tu correo corporativo para continuar.</p>
                     </div>
 
+                    <div id="avisoLogin" class="notice" role="alert" aria-live="polite"></div>
+
                     <form id="loginForm" onsubmit="procesarLogin(event)">
                         <div class="form-group">
                             <label for="email">Correo corporativo</label>
-                            <input type="email" id="email" required placeholder="nombre@activauniformes.com">
+                            <div class="input-wrap">
+                                <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                                <input type="email" id="email" required placeholder="nombre@activauniformes.com" autocomplete="username">
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label for="password">Contraseña</label>
-                            <input type="password" id="password" required placeholder="••••••••">
+                            <div class="input-wrap">
+                                <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                                <input type="password" id="password" class="has-toggle" required placeholder="••••••••" autocomplete="current-password">
+                                <button type="button" class="toggle-pass" onclick="alternarClave('password', this)" aria-label="Mostrar contraseña">
+                                    <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.4 6.4A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                </button>
+                            </div>
                         </div>
 
                         <button type="submit" id="btnSubmit" class="btn-primary">Iniciar sesión</button>
@@ -63,11 +93,16 @@
                         <p id="resetSubtitulo">Ingresa tu correo para recibir un código de verificación</p>
                     </div>
 
+                    <div id="avisoReset" class="notice" role="alert" aria-live="polite"></div>
+
                     <!-- Paso 1: Pedir el Correo -->
                     <form id="formPaso1" onsubmit="solicitarCodigo(event)">
                         <div class="form-group">
                             <label for="resetEmail">Correo corporativo</label>
-                            <input type="email" id="resetEmail" required placeholder="nombre@activauniformes.com">
+                            <div class="input-wrap">
+                                <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                                <input type="email" id="resetEmail" required placeholder="nombre@activauniformes.com" autocomplete="username">
+                            </div>
                         </div>
 
                         <button type="submit" id="btnEnviarCodigo" class="btn-primary">Enviar código</button>
@@ -77,12 +112,21 @@
                     <form id="formPaso2" onsubmit="confirmarCambio(event)" style="display: none;">
                         <div class="form-group">
                             <label for="codigoOTP">Código de verificación (6 dígitos)</label>
-                            <input type="text" id="codigoOTP" class="otp-input" required placeholder="123456" maxlength="6" autocomplete="off" inputmode="numeric">
+                            <div class="input-wrap">
+                                <input type="text" id="codigoOTP" class="otp-input" required placeholder="123456" maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label for="nuevaClave">Nueva contraseña</label>
-                            <input type="password" id="nuevaClave" required placeholder="••••••••">
+                            <div class="input-wrap">
+                                <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                                <input type="password" id="nuevaClave" class="has-toggle" required placeholder="••••••••" autocomplete="new-password">
+                                <button type="button" class="toggle-pass" onclick="alternarClave('nuevaClave', this)" aria-label="Mostrar contraseña">
+                                    <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.4 6.4A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                </button>
+                            </div>
                         </div>
 
                         <button type="submit" id="btnCambiarClave" class="btn-primary">Actualizar clave</button>
@@ -92,6 +136,8 @@
                 </div>
 
             </div>
+
+            <p class="auth-footer">© <span id="anio">2026</span> Activa Uniformes · Cúcuta, Colombia</p>
         </main>
 
     </div>
@@ -99,10 +145,53 @@
     <script>
         const API_BASE = window.location.origin;
 
+        document.getElementById('anio').textContent = new Date().getFullYear();
+
+        // ---------- Utilidades de interfaz ----------
+
+        // Muestra un mensaje dentro de la tarjeta (reemplaza a alert). tipo: 'error' | 'ok'
+        function mostrarAviso(id, mensaje, tipo) {
+            const el = document.getElementById(id);
+            // Nest devuelve un arreglo de mensajes cuando falla la validación del DTO.
+            el.textContent = Array.isArray(mensaje) ? mensaje.join(' · ') : mensaje;
+            el.className = 'notice notice--' + (tipo || 'error') + ' is-visible';
+        }
+
+        function ocultarAvisos() {
+            ['avisoLogin', 'avisoReset'].forEach((id) => {
+                const el = document.getElementById(id);
+                el.textContent = '';
+                el.className = 'notice';
+            });
+        }
+
+        // Estado de carga de un botón (deshabilita y muestra el indicador giratorio)
+        function cargando(btn, texto) {
+            btn.disabled = true;
+            btn.classList.add('is-loading');
+            btn.textContent = texto;
+        }
+
+        function listo(btn, texto) {
+            btn.disabled = false;
+            btn.classList.remove('is-loading');
+            btn.textContent = texto;
+        }
+
+        // Mostrar / ocultar contraseña
+        function alternarClave(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const visible = input.type === 'text';
+            input.type = visible ? 'password' : 'text';
+            btn.classList.toggle('is-showing', !visible);
+            btn.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+        }
+
         // Alternar vistas entre Login y Restablecimiento
         function toggleForms() {
             const loginPanel = document.getElementById('loginPanel');
             const resetPanel = document.getElementById('resetPanel');
+            ocultarAvisos();
 
             if (loginPanel.style.display === 'none') {
                 loginPanel.style.display = 'block';
@@ -117,19 +206,21 @@
                 document.getElementById('resetSubtitulo').textContent = 'Ingresa tu correo para recibir un código de verificación';
                 document.getElementById('formPaso1').reset();
                 document.getElementById('formPaso2').reset();
+                listo(document.getElementById('btnEnviarCodigo'), 'Enviar código');
+                listo(document.getElementById('btnCambiarClave'), 'Actualizar clave');
             }
         }
 
         // 1. LÓGICA DE INICIO DE SESIÓN
         async function procesarLogin(event) {
             event.preventDefault();
+            ocultarAvisos();
 
             const correo = document.getElementById('email').value.trim();
             const contrasena = document.getElementById('password').value;
             const btn = document.getElementById('btnSubmit');
 
-            btn.disabled = true;
-            btn.textContent = 'Iniciando...';
+            cargando(btn, 'Iniciando...');
 
             try {
                 const res = await fetch(`${API_BASE}/usuarios/login`, {
@@ -141,9 +232,8 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    alert(data.message || 'Correo o contraseña incorrectos.');
-                    btn.disabled = false;
-                    btn.textContent = 'Iniciar sesión';
+                    mostrarAviso('avisoLogin', data.message || 'Correo o contraseña incorrectos.', 'error');
+                    listo(btn, 'Iniciar sesión');
                     return;
                 }
 
@@ -151,9 +241,8 @@
                 const usuario = data.usuario || data.user || { correo };
 
                 if (!token) {
-                    alert('El servidor no devolvió un token válido.');
-                    btn.disabled = false;
-                    btn.textContent = 'Iniciar sesión';
+                    mostrarAviso('avisoLogin', 'El servidor no devolvió un token válido.', 'error');
+                    listo(btn, 'Iniciar sesión');
                     return;
                 }
 
@@ -163,21 +252,20 @@
 
             } catch (err) {
                 console.error('Error en login:', err);
-                alert('Error de conexión con el servidor. Revisa que NestJS esté encendido.');
-                btn.disabled = false;
-                btn.textContent = 'Iniciar sesión';
+                mostrarAviso('avisoLogin', 'Error de conexión con el servidor. Revisa que NestJS esté encendido.', 'error');
+                listo(btn, 'Iniciar sesión');
             }
         }
 
         // 2. RECUPERACIÓN - PASO 1: Enviar Código por Correo
         async function solicitarCodigo(event) {
             event.preventDefault();
+            ocultarAvisos();
 
             const correo = document.getElementById('resetEmail').value.trim();
             const btn = document.getElementById('btnEnviarCodigo');
 
-            btn.disabled = true;
-            btn.textContent = 'Enviando código...';
+            cargando(btn, 'Enviando código...');
 
             try {
                 const res = await fetch(`${API_BASE}/usuarios/solicitar-codigo`, {
@@ -189,38 +277,36 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    alert(data.message || 'No se encontró una cuenta asociada a este correo.');
-                    btn.disabled = false;
-                    btn.textContent = 'Enviar código';
+                    mostrarAviso('avisoReset', data.message || 'No se encontró una cuenta asociada a este correo.', 'error');
+                    listo(btn, 'Enviar código');
                     return;
                 }
-
-                alert('¡Código enviado con éxito! Revisa tu bandeja de entrada.');
 
                 // Transición al Paso 2
                 document.getElementById('formPaso1').style.display = 'none';
                 document.getElementById('formPaso2').style.display = 'block';
                 document.getElementById('resetSubtitulo').textContent = 'Ingresa el código enviado a ' + correo;
+                mostrarAviso('avisoReset', '¡Código enviado con éxito! Revisa tu bandeja de entrada.', 'ok');
+                document.getElementById('codigoOTP').focus();
 
             } catch (err) {
                 console.error('Error al enviar código:', err);
-                alert('Error de conexión con el servidor.');
-                btn.disabled = false;
-                btn.textContent = 'Enviar código';
+                mostrarAviso('avisoReset', 'Error de conexión con el servidor.', 'error');
+                listo(btn, 'Enviar código');
             }
         }
 
         // 3. RECUPERACIÓN - PASO 2: Confirmar Código y Actualizar Clave
         async function confirmarCambio(event) {
             event.preventDefault();
+            ocultarAvisos();
 
             const correo = document.getElementById('resetEmail').value.trim();
             const codigo = document.getElementById('codigoOTP').value.trim();
             const nuevaContrasena = document.getElementById('nuevaClave').value;
             const btn = document.getElementById('btnCambiarClave');
 
-            btn.disabled = true;
-            btn.textContent = 'Actualizando clave...';
+            cargando(btn, 'Actualizando clave...');
 
             try {
                 const res = await fetch(`${API_BASE}/usuarios/restablecer-contrasena`, {
@@ -232,20 +318,19 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    alert(data.message || 'El código ingresado es incorrecto o ya expiró.');
-                    btn.disabled = false;
-                    btn.textContent = 'Actualizar clave';
+                    mostrarAviso('avisoReset', data.message || 'El código ingresado es incorrecto o ya expiró.', 'error');
+                    listo(btn, 'Actualizar clave');
                     return;
                 }
 
-                alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.');
+                // Vuelve al login y confirma el cambio allí
                 toggleForms();
+                mostrarAviso('avisoLogin', '¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.', 'ok');
 
             } catch (err) {
                 console.error('Error al cambiar contraseña:', err);
-                alert('Error al intentar actualizar la contraseña.');
-                btn.disabled = false;
-                btn.textContent = 'Actualizar clave';
+                mostrarAviso('avisoReset', 'Error al intentar actualizar la contraseña.', 'error');
+                listo(btn, 'Actualizar clave');
             }
         }
     </script>
