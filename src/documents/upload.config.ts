@@ -7,12 +7,11 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'node:path';
-import { open, unlink } from 'node:fs/promises';
 
-/** Peso máximo por archivo: 25 MB. */
-export const TAMANO_MAXIMO_MB = 25;
+/** Peso máximo por archivo: 35 MB. */
+export const TAMANO_MAXIMO_MB = 35;
 export const TAMANO_MAXIMO_BYTES = TAMANO_MAXIMO_MB * 1024 * 1024;
 
 /**
@@ -56,13 +55,10 @@ export class ArchivoMuyGrandeFilter implements ExceptionFilter {
 }
 
 export const opcionesSubida: MulterOptions = {
-  storage: diskStorage({
-    destination: './uploads',
-    filename: (_req, file, cb) => {
-      const sufijo = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      cb(null, `file-${sufijo}${extname(file.originalname).toLowerCase()}`);
-    },
-  }),
+  // El archivo se mantiene en RAM (file.buffer) solo durante la petición y se envía
+  // directo a Cloudflare R2 (o, sin credenciales de R2, a /uploads). El límite de
+  // tamaño de abajo acota la memoria que puede consumir cada subida.
+  storage: memoryStorage(),
   limits: {
     fileSize: TAMANO_MAXIMO_BYTES,
     files: 1, // un archivo por petición
@@ -117,24 +113,15 @@ const FIRMAS: Record<string, (buf: Buffer) => boolean> = {
 };
 
 /**
- * Comprueba que el archivo ya guardado en disco tenga la firma binaria
- * correspondiente a su extensión. Si no coincide, lo elimina y lanza un 400.
+ * Comprueba que el archivo recibido en memoria tenga la firma binaria
+ * correspondiente a su extensión. Si no coincide, lanza un 400 (no se almacena).
  */
-export async function verificarContenidoArchivo(file: Express.Multer.File): Promise<void> {
+export function verificarContenidoArchivo(file: Express.Multer.File): void {
   const ext = extname(file.originalname).toLowerCase();
   const verificar = FIRMAS[ext];
-
-  let cabecera: Buffer;
-  const fh = await open(file.path, 'r');
-  try {
-    const { buffer, bytesRead } = await fh.read(Buffer.alloc(512), 0, 512, 0);
-    cabecera = buffer.subarray(0, bytesRead);
-  } finally {
-    await fh.close();
-  }
+  const cabecera = file.buffer?.subarray(0, 512) ?? Buffer.alloc(0);
 
   if (!verificar || cabecera.length === 0 || !verificar(cabecera)) {
-    await unlink(file.path).catch(() => undefined);
     throw new BadRequestException(
       `El archivo "${file.originalname}" no es un ${ext || 'archivo'} válido o está dañado.`,
     );

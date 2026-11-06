@@ -16,8 +16,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
-import { join } from 'path';
-import { unlink } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
 import { ArchivoMuyGrandeFilter, opcionesSubida, verificarContenidoArchivo } from './upload.config';
@@ -56,25 +55,15 @@ export class DocumentsController {
 
     const userId = req.user.id || req.user.sub;
     if (!userId) {
-      await unlink(file.path).catch(() => undefined);
       throw new UnauthorizedException('Usuario no válido o sesión expirada');
     }
 
-    // Revisa los bytes reales del archivo; si no coinciden con la extensión lo borra y responde 400.
-    await verificarContenidoArchivo(file);
+    // Revisa los bytes reales del archivo (en memoria); si no coinciden con la extensión responde 400.
+    verificarContenidoArchivo(file);
 
-    try {
-      return await this.documentsService.guardarDocumento(
-        file,
-        userId,
-        departamento,
-        fechaDocumento,
-      );
-    } catch (err) {
-      // Fecha inválida o error de BD: no dejar el archivo huérfano en /uploads.
-      await unlink(file.path).catch(() => undefined);
-      throw err;
-    }
+    // El archivo solo vive en RAM: si algo falla no queda nada que limpiar en disco,
+    // y el servicio se encarga de no dejar objetos huérfanos en Cloudflare R2.
+    return this.documentsService.guardarDocumento(file, userId, departamento, fechaDocumento);
   }
 
   // GET: http://localhost:3000/documents
@@ -122,13 +111,16 @@ export class DocumentsController {
   @UseGuards(JwtAuthGuard)
   @Get(':id/download')
   async download(@Param('id') id: string, @Res() res: Response) {
-    const doc = await this.documentsService.findOne(id);
-    if (!doc) {
-      return res.status(404).json({ mensaje: 'Documento no encontrado' });
-    }
+    // El bucket es privado: el backend lee el objeto de Cloudflare R2 y lo transmite al cliente,
+    // así la descarga sigue protegida por el JWT. Los errores (404/500) los responde Nest.
+    const archivo = await this.documentsService.obtenerArchivo(id);
 
-    const rutaAbsoluta = join(process.cwd(), doc.ruta);
-    return res.download(rutaAbsoluta, doc.nombreOriginal);
+    res.attachment(archivo.nombre); // Content-Disposition + Content-Type según la extensión
+    if (archivo.tipo) res.type(archivo.tipo);
+    if (archivo.tamano !== undefined) res.setHeader('Content-Length', archivo.tamano);
+
+    // pipeline cierra ambos streams si el cliente cancela o R2 corta la conexión.
+    await pipeline(archivo.contenido, res).catch(() => res.destroy());
   }
 
   // DELETE: http://localhost:3000/documents/1 (Protegido por Roles)

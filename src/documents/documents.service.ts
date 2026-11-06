@@ -1,14 +1,73 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  NoSuchKey,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import type { Readable } from 'node:stream';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Documento } from './documento.entity';
+import { ConfigR2, cargarConfigR2, urlObjetoR2, variablesR2Faltantes } from './r2.config';
+
+/** Contenido listo para enviarse al cliente en una descarga. */
+export interface ArchivoDescargable {
+  contenido: Readable;
+  nombre: string;
+  tipo?: string;
+  tamano?: number;
+}
+
+/** Carpeta del respaldo local (cuando Cloudflare R2 no está configurado). */
+const CARPETA_LOCAL = 'uploads';
+
+/**
+ * Los documentos guardados en Cloudflare R2 tienen en `ruta` una URL HTTPS y en
+ * `nombreGuardado` la clave del objeto; los del respaldo local, una ruta local
+ * (p. ej. "/uploads/<uuid>.pdf"; los registros antiguos pueden no tener la "/" inicial).
+ */
+const estaEnR2 = (doc: Documento) => doc.ruta.startsWith('https://');
 
 /** Fecha efectiva: la asignada por el usuario o, si no tiene, la de registro en el servidor. */
 const FECHA_EFECTIVA = 'COALESCE(doc.fecha, doc.fechaSubida)';
 
 const FORMATO_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Comprobación básica de formato de las credenciales de Cloudflare R2.
+ * Devuelve la lista de problemas encontrados (vacía = credenciales válidas).
+ * El Account ID forma parte del hostname del endpoint, así que se exige estrictamente
+ * su formato (32 caracteres hexadecimales).
+ */
+function problemasConfigR2(config: ConfigR2): string[] {
+  const problemas: string[] = [];
+  if (!/^[0-9a-f]{32}$/i.test(config.accountId)) {
+    problemas.push('CLOUDFLARE_ACCOUNT_ID debe tener 32 caracteres hexadecimales');
+  }
+  if (!/^[A-Za-z0-9]+$/.test(config.accessKeyId)) {
+    problemas.push('CLOUDFLARE_R2_ACCESS_KEY_ID contiene caracteres no válidos');
+  }
+  if (!/^[A-Za-z0-9]+$/.test(config.secretAccessKey)) {
+    problemas.push('CLOUDFLARE_R2_SECRET_ACCESS_KEY contiene caracteres no válidos');
+  }
+  // Reglas de nombres de bucket de R2: 3-63 caracteres, minúsculas, números y guiones.
+  if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(config.bucket)) {
+    problemas.push('CLOUDFLARE_R2_BUCKET_NAME no es un nombre de bucket válido');
+  }
+  return problemas;
+}
 
 export interface FiltrosDocumentos {
   pagina?: number;
@@ -38,41 +97,219 @@ function parsearFechaLocal(valor: string, campo: string): Date {
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+  /** `null` = Cloudflare R2 no configurado → respaldo local en /uploads. */
+  private readonly r2: { config: ConfigR2; cliente: S3Client } | null;
+
   constructor(
     @InjectRepository(Documento)
     private documentoRepository: Repository<Documento>,
-  ) {}
+  ) {
+    this.r2 = this.inicializarR2();
+  }
+
+  /**
+   * Interruptor de almacenamiento:
+   * - Credenciales de R2 presentes y válidas → cliente S3 apuntando a Cloudflare R2.
+   * - Credenciales ausentes, vacías o mal formadas → `null` (respaldo local en /uploads).
+   */
+  private inicializarR2(): { config: ConfigR2; cliente: S3Client } | null {
+    // cargarConfigR2 devuelve null si falta alguna variable o está vacía.
+    const config = cargarConfigR2();
+    if (!config) {
+      this.logger.warn(
+        `Cloudflare R2 no configurado (faltan: ${variablesR2Faltantes().join(', ')}). ` +
+          `Los documentos se guardarán localmente en /${CARPETA_LOCAL}.`,
+      );
+      return null;
+    }
+
+    const problemas = problemasConfigR2(config);
+    if (problemas.length > 0) {
+      this.logger.error(
+        `Credenciales de Cloudflare R2 no válidas (${problemas.join('; ')}). ` +
+          `Los documentos se guardarán localmente en /${CARPETA_LOCAL}.`,
+      );
+      return null;
+    }
+
+    const cliente = new S3Client({
+      region: 'auto', // R2 no usa regiones; Cloudflare exige 'auto'.
+      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+      // Las versiones recientes del SDK añaden checksums CRC por defecto en cada
+      // petición; se limitan a los casos obligatorios para máxima compatibilidad con R2.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    });
+
+    this.logger.log(`Almacenamiento: Cloudflare R2 (bucket "${config.bucket}").`);
+    return { config, cliente };
+  }
+
+  /* ------------------------- Cloudflare R2 -------------------------- */
+
+  private obtenerR2() {
+    if (!this.r2) {
+      throw new InternalServerErrorException(
+        'El documento está en Cloudflare R2, pero el almacenamiento R2 no está configurado.',
+      );
+    }
+    return this.r2;
+  }
+
+  /** Clave única e impredecible, agrupada por año/mes: documentos/2026/11/<uuid>.pdf */
+  private generarClave(nombreOriginal: string): string {
+    const ahora = new Date();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    return `documentos/${ahora.getFullYear()}/${mes}/${randomUUID()}${extname(nombreOriginal).toLowerCase()}`;
+  }
+
+  private async subirAR2(clave: string, file: Express.Multer.File): Promise<string> {
+    const { config, cliente } = this.obtenerR2();
+    try {
+      await cliente.send(
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          Key: clave,
+          Body: file.buffer, // Multer usa memoryStorage: el archivo nunca toca el disco.
+          ContentType: file.mimetype,
+          ContentLength: file.size,
+          // Si alguien abre la URL directa, el navegador descarga con el nombre original.
+          ContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(file.originalname)}`,
+        }),
+      );
+    } catch (err) {
+      this.logger.error(`Error subiendo "${clave}" a Cloudflare R2`, err as Error);
+      throw new InternalServerErrorException(
+        'No se pudo almacenar el archivo. Inténtalo de nuevo más tarde.',
+      );
+    }
+    return urlObjetoR2(config, clave);
+  }
+
+  private async eliminarDeR2(clave: string): Promise<void> {
+    try {
+      const { config, cliente } = this.obtenerR2();
+      await cliente.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: clave }));
+    } catch (err) {
+      // No se relanza: el registro ya no existe y un objeto huérfano no afecta al usuario.
+      this.logger.error(`No se pudo borrar "${clave}" de Cloudflare R2`, err as Error);
+    }
+  }
+
+  /* ------------------------- Respaldo local ------------------------- */
+
+  /**
+   * Guarda el buffer en ./uploads/<uuid>.<ext> y devuelve la ruta que se guarda
+   * en MySQL: "/uploads/<uuid>.<ext>".
+   */
+  private async guardarLocal(clave: string, file: Express.Multer.File): Promise<string> {
+    // El nombre lo genera el servidor (uuid): el nombre original nunca forma parte de la ruta.
+    const nombre = clave.split('/').pop()!;
+    const carpeta = join(process.cwd(), CARPETA_LOCAL);
+    try {
+      await mkdir(carpeta, { recursive: true });
+      await writeFile(join(carpeta, nombre), file.buffer);
+    } catch (err) {
+      this.logger.error(`Error guardando "${nombre}" en /${CARPETA_LOCAL}`, err as Error);
+      throw new InternalServerErrorException(
+        'No se pudo almacenar el archivo. Inténtalo de nuevo más tarde.',
+      );
+    }
+    return `/${CARPETA_LOCAL}/${nombre}`;
+  }
+
+  private async eliminarLocal(ruta: string): Promise<void> {
+    await unlink(join(process.cwd(), ruta)).catch((err: NodeJS.ErrnoException) => {
+      if (err.code !== 'ENOENT') {
+        this.logger.error(`No se pudo borrar el archivo ${ruta}`, err);
+      }
+    });
+  }
+
+  /* --------------------------- Documentos --------------------------- */
 
   async guardarDocumento(
     file: Express.Multer.File,
     userId: number,
-    departamento: string = 'GENERAL',
+    departamento: string,
     fechaDocumento?: string,
   ) {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // Se valida antes de subir nada, para no dejar archivos huérfanos.
+    const fecha = fechaDocumento ? parsearFechaLocal(fechaDocumento, 'fechaDocumento') : new Date();
 
-    let fecha = hoy;
-    if (fechaDocumento && fechaDocumento.trim()) {
-      fecha = parsearFechaLocal(fechaDocumento, 'La fecha del documento');
-      if (fecha > hoy) {
-        throw new BadRequestException('La fecha del documento no puede ser posterior a hoy.');
-      }
-      if (fecha.getFullYear() < 1900) {
-        throw new BadRequestException('La fecha del documento no puede ser anterior a 1900.');
-      }
+    // Interruptor: Cloudflare R2 si está configurado; si no, carpeta local /uploads.
+    const clave = this.generarClave(file.originalname);
+    const ruta = this.r2 ? await this.subirAR2(clave, file) : await this.guardarLocal(clave, file);
+
+    const hasCloudflareCredentials =
+      process.env.CLOUDFLARE_ACCOUNT_ID &&
+      process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
+      process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+
+    console.log('¿Tiene credenciales de Cloudflare?', Boolean(hasCloudflareCredentials));
+    console.log('Account ID detectado:', process.env.CLOUDFLARE_ACCOUNT_ID);
+
+    try {
+      const nuevoDoc = this.documentoRepository.create({
+        nombreOriginal: file.originalname,
+        nombreGuardado: this.r2 ? clave : ruta.split('/').pop()!,
+        ruta,
+        departamento,
+        fecha,
+        usuarioId: userId,
+      });
+      return await this.documentoRepository.save(nuevoDoc);
+    } catch (err) {
+      // 🔍 AQUÍ MOSTRAMOS EL ERROR REAL DE CLOUDFLARE SI LLEGA A FALLAR
+      console.error('DETALLE DEL ERROR EN LA SUBIDA:', err);
+
+      // Si falla la base de datos, se borra el archivo recién subido.
+      await (this.r2 ? this.eliminarDeR2(clave) : this.eliminarLocal(ruta));
+      throw err;
+    }
+  }
+
+  /** Obtiene el contenido del documento (desde Cloudflare R2 o del respaldo local). */
+  async obtenerArchivo(id: string): Promise<ArchivoDescargable> {
+    const doc = await this.findOne(id);
+    if (!doc) {
+      throw new NotFoundException('Documento no encontrado');
     }
 
-    const nuevoDocumento = this.documentoRepository.create({
-      nombreOriginal: file.originalname,
-      nombreGuardado: file.filename,
-      ruta: file.path,
-      usuarioId: userId,
-      departamento,
-      fecha,
-    });
+    if (!estaEnR2(doc)) {
+      const rutaLocal = join(process.cwd(), doc.ruta);
+      const info = await stat(rutaLocal).catch(() => null);
+      if (!info) throw new NotFoundException('El archivo del documento ya no existe');
+      return {
+        contenido: createReadStream(rutaLocal),
+        nombre: doc.nombreOriginal,
+        tamano: info.size,
+      };
+    }
 
-    return await this.documentoRepository.save(nuevoDocumento);
+    const { config, cliente } = this.obtenerR2();
+    try {
+      const respuesta = await cliente.send(
+        new GetObjectCommand({ Bucket: config.bucket, Key: doc.nombreGuardado }),
+      );
+      return {
+        contenido: respuesta.Body as Readable,
+        nombre: doc.nombreOriginal,
+        tipo: respuesta.ContentType,
+        tamano: respuesta.ContentLength,
+      };
+    } catch (err) {
+      if (err instanceof NoSuchKey) {
+        throw new NotFoundException('El archivo del documento ya no existe');
+      }
+      this.logger.error(`Error descargando "${doc.nombreGuardado}" de Cloudflare R2`, err as Error);
+      throw new InternalServerErrorException('No se pudo obtener el archivo.');
+    }
   }
 
   async findAll() {
@@ -161,10 +398,12 @@ export class DocumentsService {
 
     await this.documentoRepository.delete(doc.id);
 
-    // Borra también el archivo físico de /uploads para no acumular espacio.
-    await unlink(join(process.cwd(), doc.ruta)).catch((err: NodeJS.ErrnoException) => {
-      if (err.code !== 'ENOENT') console.error(`No se pudo borrar el archivo ${doc.ruta}:`, err);
-    });
+    // Borra también el archivo para no acumular espacio (Cloudflare R2 o /uploads).
+    if (estaEnR2(doc)) {
+      await this.eliminarDeR2(doc.nombreGuardado);
+    } else {
+      await this.eliminarLocal(doc.ruta);
+    }
 
     return { mensaje: `Documento con id ${id} eliminado correctamente` };
   }
