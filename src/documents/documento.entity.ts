@@ -8,6 +8,8 @@ import {
   ValueTransformer,
 } from 'typeorm';
 import { Usuario } from '../usuarios/usuario.entity';
+import { Carpeta } from '../folders/carpeta.entity';
+import { DEPARTAMENTOS, type Departamento } from '../common/departamentos';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -43,8 +45,9 @@ export class Documento {
   @Column()
   ruta!: string;
 
-  @Column()
-  departamento!: string;
+  /** Solo se admiten las áreas de src/common/departamentos.ts (columna ENUM). */
+  @Column({ type: 'enum', enum: DEPARTAMENTOS })
+  departamento!: Departamento;
 
   @Column()
   usuarioId!: number;
@@ -66,4 +69,16 @@ export class Documento {
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'usuarioId' })
   usuario!: Usuario;
+
+  /**
+   * Carpeta que contiene el documento (null = raíz del área).
+   * Es nullable, así que los documentos existentes quedan en la raíz de su área.
+   * Sin onDelete: la BD impide borrar una carpeta que aún tiene documentos.
+   */
+  @Column({ type: 'int', nullable: true })
+  carpetaId!: number | null;
+
+  @ManyToOne(() => Carpeta, (carpeta) => carpeta.documentos, { nullable: true })
+  @JoinColumn({ name: 'carpetaId' })
+  carpeta?: Carpeta | null;
 }
