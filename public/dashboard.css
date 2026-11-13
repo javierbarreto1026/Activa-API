@@ -41,6 +41,9 @@ button { cursor: pointer; }
 
 :focus-visible { outline: 3px solid rgba(200, 16, 46, .45); outline-offset: 2px; }
 
+/* El atributo hidden debe ganar a los display: flex/grid de los componentes */
+[hidden] { display: none !important; }
+
 .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
@@ -270,6 +273,18 @@ tbody tr:last-child td { border-bottom: 0; }
 .file-name { font-weight: 700; word-break: break-word; }
 .file-name mark { background: #ffe3e7; color: inherit; border-radius: 2px; padding: 0 1px; }
 
+/* Datos apilados bajo el nombre (quién lo subió • área). Ocultos en escritorio, donde
+   ya tienen su columna; ver RESPONSIVE. Si no caben en una línea, el "•" que quedaría
+   al inicio de la segunda se recorta (margen negativo + overflow: hidden). */
+.file-meta {
+    display: none; overflow: hidden; margin-top: .2rem;
+    font-size: .7rem; font-weight: 600; line-height: 1.35; color: var(--muted);
+}
+.file-meta-in { display: flex; flex-wrap: wrap; align-items: center; margin-left: -.9rem; }
+.file-meta-in > span { display: inline-flex; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+.file-meta-in > span::before { content: "•"; flex: 0 0 .9rem; text-align: center; }
+.file-meta svg { flex-shrink: 0; margin-right: .25rem; }
+
 /* Etiqueta de área: nunca se parte en dos líneas */
 .chip {
     display: inline-flex; align-items: center; gap: .4rem;
@@ -278,7 +293,6 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .chip.a-contabilidad { background: #e6f2ec; color: var(--ok); }
-.chip.a-produccion { background: var(--red-tint); color: var(--red-dark); }
 .chip.a-recursos-humanos { background: #e8eef8; color: var(--blue); }
 
 .by { display: flex; align-items: center; gap: .6rem; color: #444; white-space: nowrap; }
@@ -398,6 +412,139 @@ dialog.dialog-sm { width: min(400px, calc(100% - 2rem)); }
 .toast.show { transform: none; opacity: 1; }
 .toast.is-ok { border-left-color: #3ecf8e; }
 
+/* ================= CARPETAS ================= */
+
+.btn-ghost.btn-sm {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem .8rem; font-size: .85rem; white-space: nowrap;
+}
+
+/* Barra de ubicación: Área › Carpeta › Subcarpeta */
+.explorer {
+    display: flex; align-items: center; justify-content: space-between; gap: .6rem 1rem; flex-wrap: wrap;
+    padding: .7rem 1.25rem; border-bottom: 1px solid var(--line);
+}
+.explorer nav { min-width: 0; flex: 1; }
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: .1rem; margin: 0; padding: 0; list-style: none; font-size: .92rem; }
+.crumbs li { display: flex; align-items: center; min-width: 0; }
+.crumbs li + li::before { content: "›"; color: var(--muted); margin: 0 .25rem; font-weight: 700; }
+.crumb {
+    display: inline-flex; align-items: center; gap: .4rem; max-width: 260px;
+    background: none; border: 0; padding: .3rem .45rem; border-radius: 6px;
+    font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+button.crumb:hover { background: var(--surface-alt); color: var(--text); }
+.crumb.is-current { color: var(--ink); }
+.crumb svg { flex-shrink: 0; color: var(--red); }
+
+/* Subcarpetas del nivel actual */
+.folders {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem;
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+}
+.folder-card {
+    display: flex; align-items: center; min-width: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    transition: border-color .15s, box-shadow .15s;
+}
+.folder-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+.folder-open {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: .75rem;
+    background: none; border: 0; padding: .8rem .9rem; text-align: left; border-radius: var(--radius);
+}
+.folder-ico {
+    width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center;
+    border-radius: 9px; background: var(--red-tint); color: var(--red);
+}
+.folder-body { display: flex; flex-direction: column; min-width: 0; }
+.folder-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folder-name mark { background: #ffe3e7; color: inherit; border-radius: 2px; padding: 0 1px; }
+.folder-meta { font-size: .78rem; color: var(--muted); }
+.folder-edit {
+    flex-shrink: 0; width: 32px; height: 32px; margin-right: .5rem; display: grid; place-items: center;
+    background: none; border: 1px solid transparent; border-radius: 7px; color: var(--muted);
+    transition: background .15s, border-color .15s, color .15s;
+}
+.folder-edit:hover { border-color: var(--line-strong); background: var(--surface-alt); color: var(--ink); }
+
+/* Ubicación de un archivo que está en otra carpeta (búsquedas, pestaña "Todos") */
+.file-text { display: flex; flex-direction: column; min-width: 0; }
+.file-path {
+    display: inline-flex; align-items: center; gap: .3rem; margin-top: .1rem;
+    font-size: .76rem; font-weight: 600; color: var(--muted); word-break: break-word;
+}
+.file-path svg { flex-shrink: 0; }
+
+.state.state-sm { padding: 1.75rem 1.5rem; }
+.state.state-sm p { margin-bottom: 0; }
+
+.chip.a-sst { background: #fdf0e6; color: #a34a12; }
+.chip.a-gerencia { background: #efe9f7; color: #5b3f8c; }
+
+/* ================= SUBIDA DE CARPETAS ================= */
+
+.destino {
+    margin: 0; display: flex; align-items: flex-start; gap: .5rem;
+    padding: .6rem .8rem; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface-alt); font-size: .86rem; color: var(--muted);
+}
+.destino svg { flex-shrink: 0; margin-top: .2rem; color: var(--red); }
+.destino strong { color: var(--text); word-break: break-word; }
+
+.dropzone .picked-folder { display: inline-flex; align-items: center; gap: .4rem; }
+.dropzone .picked-folder svg { color: var(--red); }
+.dropzone .meta { display: block; margin: .15rem 0 .35rem; font-size: .84rem; }
+
+.progress { display: grid; gap: .35rem; }
+.progress-track { height: 8px; border-radius: 999px; background: #eeeeee; overflow: hidden; }
+.progress-track span { display: block; width: 0; height: 100%; background: var(--red); transition: width .2s; }
+.progress-text { font-size: .8rem; color: var(--muted); }
+
+.btn-ghost:disabled, .modal-close:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Resumen de archivos omitidos */
+.confirm-ico.is-warn { background: #fdf0e6; color: #a34a12; }
+.omitidos {
+    margin: 0 0 1.4rem; padding: 0 0 0 1.1rem; max-height: 220px; overflow: auto;
+    text-align: left; font-size: .85rem; color: #444;
+}
+.omitidos li { margin: .25rem 0; word-break: break-word; }
+.omitidos small { color: var(--muted); }
+
+/* ================= AUDITORÍA ================= */
+
+dialog.dialog-lg { width: min(1040px, calc(100% - 2rem)); }
+.audit-filters {
+    display: flex; gap: .6rem; flex-wrap: wrap; align-items: center;
+    margin-top: 1.1rem; padding: .9rem 1.6rem; background: var(--surface-alt);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.audit-wrap { min-height: 220px; max-height: 55dvh; overflow: auto; }
+.audit-wrap th { position: sticky; top: 0; z-index: 1; }
+.audit-detail { min-width: 260px; color: #444; word-break: break-word; }
+.by-text { display: flex; flex-direction: column; line-height: 1.25; }
+.by-text small { font-size: .74rem; color: var(--muted); }
+.badge {
+    display: inline-block; white-space: nowrap; padding: .18rem .6rem; border-radius: 6px;
+    font-size: .76rem; font-weight: 700; background: #eeeeee; color: #4b4b4b;
+}
+.badge.b-UPLOAD_DOCUMENT { background: #e6f2ec; color: var(--ok); }
+.badge.b-CREATE_FOLDER { background: #e8eef8; color: var(--blue); }
+.badge.b-RENAME_FOLDER { background: #fdf0e6; color: #a34a12; }
+.badge.b-DELETE_DOCUMENT { background: var(--red-tint); color: var(--red-dark); }
+.badge.b-UPDATE_USER { background: #efe9f7; color: #5b3f8c; }
+
+/* ================= GESTIÓN DE USUARIOS ================= */
+
+.btn-primary.btn-sm { padding: .45rem .9rem; font-size: .85rem; white-space: nowrap; }
+.users-toolbar .search { flex: 1 1 260px; }
+.users-toolbar .search input { width: 100%; }
+.user-id { width: 1%; color: var(--muted); font-variant-numeric: tabular-nums; }
+.user-email { min-width: 180px; color: #444; overflow-wrap: anywhere; }
+.chip.is-invalid { background: var(--red-tint); color: var(--red-dark); box-shadow: inset 0 0 0 1px #efc3cb; }
+tr.is-updated td { animation: fila-actualizada 1.8s ease-out; }
+@keyframes fila-actualizada { from { background: #e6f2ec; } }
+
 /* ================= COMPATIBILIDAD (index.html) ================= */
 
 .form-group label { display: block; font-size: .85rem; font-weight: 700; margin-bottom: .4rem; color: #333; }
@@ -415,6 +562,8 @@ dialog.dialog-sm { width: min(400px, calc(100% - 2rem)); }
 
 @media (max-width: 1100px) {
     .col-hide-md { display: none; }
+    .file-meta { display: block; }              /* "Subido por" ya no tiene columna */
+    .file-meta .meta-area { display: none; }    /* "Área" todavía sí */
 }
 
 @media (max-width: 720px) {
@@ -429,17 +578,55 @@ dialog.dialog-sm { width: min(400px, calc(100% - 2rem)); }
     .search, .search input { width: 100%; }
     .toolbar { align-items: stretch; }
     .col-hide-sm { display: none; }
+    .file-meta .meta-area { display: inline-flex; } /* "Área" también se oculta */
     th, td { padding-left: .9rem; padding-right: .9rem; }
     th { white-space: normal; }
     th .sort { text-align: left; }
-    .file-cell { min-width: 0; }
     .grid-2 { grid-template-columns: 1fr; }
     .modal-head { padding: 1.2rem 1.25rem 0; }
     .modal-body { padding: 1rem 1.25rem 1.25rem; }
+    .explorer { padding: .65rem .9rem; }
+    .folders { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; padding: .75rem .9rem; }
+    .crumb { max-width: 160px; }
+    .audit-filters { padding: .8rem 1.25rem; }
+    .audit-filters select { flex: 1; min-width: 0; }
+    .users-toolbar .search { flex-basis: 100%; }
+    .users-toolbar .btn-sm { flex: 1; justify-content: center; }
+}
+
+/* Tabla de documentos en celular.
+   "Fecha" y "Acciones" se ajustan a su contenido (width: 1% + nowrap) y "Nombre" se
+   queda con el resto (~55-60 %). Su ancho mínimo evita que se parta letra por letra. */
+@media (max-width: 720px) {
+    #panel th, #panel td { padding-left: .5rem; padding-right: .5rem; }
+    #panel th:first-child, #panel td:first-child { padding-left: .75rem; }
+    #panel th:last-child, #panel td:last-child { padding-right: .75rem; }
+    #panel th { font-size: .64rem; letter-spacing: .04em; }
+    #panel th .sort { display: inline; } /* la flecha puede bajar de línea */
+    #panel .th-largo { display: none; }  /* "Fecha del documento" → "Fecha" */
+
+    /* 1. Nombre del archivo: la mayor parte del ancho */
+    #panel th[data-col="nombre"] { width: 58%; }
+    #panel .file-cell { min-width: 6rem; gap: .55rem; }
+    #panel .file-ico { width: 28px; height: 34px; padding-bottom: 4px; font-size: .5rem; border-radius: 4px 9px 4px 4px; }
+    #panel .file-ico::before { width: 9px; height: 9px; }
+    #panel .file-name { font-size: .86rem; line-height: 1.3; overflow-wrap: anywhere; word-break: normal; }
+
+    /* 2. Fecha: letra más pequeña y solo el ancho de "dd/mm/aaaa" */
+    #panel th[data-col="fecha"] { width: 1%; }
+    #panel td.date { font-size: .72rem; font-variant-numeric: tabular-nums; }
+    #panel td.date small { font-size: .68rem; white-space: normal; }
+
+    /* 3. Acciones: lo mínimo, con los botones siempre en una sola fila */
+    #panel th:last-child { width: 1%; white-space: nowrap; }
+    #panel td:last-child { white-space: nowrap; }
+    #panel .actions { gap: .3rem; flex-wrap: nowrap; }
+    #panel .action-link { padding: .35rem; }
 }
 
 @media (max-width: 480px) {
     .summary { grid-template-columns: 1fr; }
+    .folders { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

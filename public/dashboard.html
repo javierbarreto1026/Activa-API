@@ -36,7 +36,9 @@
                 <div class="nav-links">
                     <button type="button" class="nav-link" id="btnSubirArchivo">Subir archivo</button>
 
-                    <button type="button" class="nav-link" id="btnGestionAdmin" style="display: none;" onclick="abrirModalAdmin()">Gestión de Usuarios</button>
+                    <button type="button" class="nav-link" id="btnGestionAdmin" hidden>Gestión de Usuarios</button>
+
+                    <button type="button" class="nav-link" id="btnAuditoria" hidden>Auditoría</button>
                 </div>
 
                 <div class="user-chip">
@@ -58,7 +60,7 @@
             <div>
                 <span class="eyebrow">Portal de gestión documental</span>
                 <h1 id="saludo">Documentos</h1>
-                <p>Consulta, busca y sube los archivos de cada área de la empresa.</p>
+                <p id="subtitulo">Consulta, busca y sube los archivos de cada área de la empresa.</p>
             </div>
             <button type="button" class="btn-primary" id="btnSubirArchivo2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
@@ -105,6 +107,17 @@
 
             <div class="tabs" role="tablist" id="tabs" aria-label="Áreas"></div>
 
+            <!-- Ubicación dentro del área + acciones de carpeta (solo en la pestaña de un área) -->
+            <div class="explorer" id="explorador" hidden>
+                <nav aria-label="Ubicación">
+                    <ol class="crumbs" id="migas"></ol>
+                </nav>
+                <button type="button" class="btn-ghost btn-sm" id="btnNuevaCarpeta" data-nueva-carpeta>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/></svg>
+                    Nueva carpeta
+                </button>
+            </div>
+
             <div class="toolbar">
                 <div class="filters">
                     <span class="filters-label">Fecha del documento</span>
@@ -123,6 +136,9 @@
                 </div>
             </div>
 
+            <!-- Subcarpetas del nivel actual, como tarjetas -->
+            <div class="folders" id="carpetas" role="list" aria-label="Carpetas" hidden></div>
+
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -130,7 +146,7 @@
                             <th scope="col" aria-sort="none" data-col="nombre"><button type="button" class="sort" data-sort="nombre">Nombre del archivo <span class="sort-arrow" aria-hidden="true">▲</span></button></th>
                             <th scope="col" class="col-hide-sm">Área</th>
                             <th scope="col" class="col-hide-md">Subido por</th>
-                            <th scope="col" aria-sort="descending" data-col="fecha"><button type="button" class="sort" data-sort="fecha">Fecha del documento <span class="sort-arrow" aria-hidden="true">▼</span></button></th>
+                            <th scope="col" aria-sort="descending" data-col="fecha"><button type="button" class="sort" data-sort="fecha">Fecha<span class="th-largo"> del documento</span> <span class="sort-arrow" aria-hidden="true">▼</span></button></th>
                             <th scope="col">Acciones</th>
                         </tr>
                     </thead>
@@ -153,19 +169,29 @@
         <form id="formSubir" method="dialog">
             <div class="modal-head">
                 <div>
-                    <h2 id="modalTitulo">Subir archivo</h2>
-                    <p class="modal-sub">Formatos permitidos: PDF, Word, Excel, PowerPoint, CSV e imágenes (hasta 35 MB).</p>
+                    <h2 id="modalTitulo">Subir archivos</h2>
+                    <p class="modal-sub">Sube un archivo o una carpeta completa con sus subcarpetas. Formatos permitidos: PDF, Word, Excel, PowerPoint, CSV e imágenes (hasta 35 MB por archivo).</p>
                 </div>
                 <button type="button" class="modal-close" id="btnCerrarModal" aria-label="Cerrar">×</button>
             </div>
             <div class="modal-body">
                 <div class="dropzone" id="dropzone">
                     <span class="dropzone-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></span>
-                    <p id="dropTexto"><strong>Arrastra el archivo aquí</strong><br>o <label class="pick" for="inputArchivo">búscalo en tu equipo</label></p>
+                    <p id="dropTexto"></p>
                     <input type="file" id="inputArchivo" class="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.jpg,.jpeg,.png,.webp">
+                    <!-- Selección de una carpeta completa (Chrome, Edge, Firefox y Safari) -->
+                    <input type="file" id="inputCarpeta" class="sr-only" webkitdirectory directory multiple>
+                    <input type="file" id="inputCamara" class="sr-only" accept="image/*" capture="environment">
                 </div>
+                <div style="text-align: center; margin-top: 15px;">
+    <label for="inputCamara" style="background-color: #28a745; color: white; padding: 10px 20px; border-radius: 6px; cursor: pointer; display: inline-block; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        📸 Tomar Foto desde Celular
+    </label>
+</div>
 
-                <div class="field">
+                <p class="destino" id="destinoSubida" aria-live="polite"></p>
+
+                <div class="field" id="campoArea">
                     <label for="selectArea">Área del documento</label>
                     <select id="selectArea" required></select>
                 </div>
@@ -173,12 +199,149 @@
                 <div class="field">
                     <label for="inputFechaDocumento">Fecha del documento <span class="field-optional">(opcional)</span></label>
                     <input type="date" id="inputFechaDocumento" aria-describedby="ayudaFechaDocumento">
-                    <small class="field-hint" id="ayudaFechaDocumento">Úsala para archivos históricos, como actas o facturas de años anteriores. Si la dejas vacía se usará la fecha de hoy.</small>
+                    <small class="field-hint" id="ayudaFechaDocumento">Úsala para archivos históricos, como actas o facturas de años anteriores. Si subes una carpeta se aplica a todos sus archivos. Si la dejas vacía se usará la fecha de hoy.</small>
+                </div>
+
+                <div class="progress" id="progresoSubida" hidden>
+                    <div class="progress-track" role="progressbar" aria-label="Progreso de la subida" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progresoBarraWrap"><span id="progresoBarra"></span></div>
+                    <span class="progress-text" id="progresoTexto"></span>
                 </div>
 
                 <div class="modal-actions">
                     <button type="button" class="btn-ghost" id="btnCancelarSubida">Cancelar</button>
-                    <button type="submit" class="btn-primary" id="btnEnviar">Subir archivo</button>
+                    <button type="submit" class="btn-primary" id="btnEnviar">Subir</button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+
+    <dialog id="modalCarpeta" class="dialog-sm" aria-labelledby="carpetaTitulo">
+        <form id="formCarpeta">
+            <div class="modal-head">
+                <div>
+                    <h2 id="carpetaTitulo">Nueva carpeta</h2>
+                    <p class="modal-sub" id="carpetaSub"></p>
+                </div>
+                <button type="button" class="modal-close" data-cerrar-carpeta aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label for="inputNombreCarpeta">Nombre de la carpeta</label>
+                    <input type="text" id="inputNombreCarpeta" required maxlength="100" autocomplete="off" placeholder="Ej. Contratos 2026" aria-describedby="ayudaCarpeta">
+                    <small class="field-hint" id="ayudaCarpeta">No puede contener los caracteres \ / : * ? " &lt; &gt; |</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-ghost" data-cerrar-carpeta>Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btnGuardarCarpeta">Crear carpeta</button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+
+    <dialog id="modalAuditoria" class="dialog-lg" aria-labelledby="auditoriaTitulo">
+        <div class="modal-head">
+            <div>
+                <h2 id="auditoriaTitulo">Registro de auditoría</h2>
+                <p class="modal-sub">Quién subió, eliminó u organizó archivos en cada área. Solo visible para administradores.</p>
+            </div>
+            <button type="button" class="modal-close" data-cerrar-auditoria aria-label="Cerrar">×</button>
+        </div>
+        <div class="audit-filters">
+            <label class="sr-only" for="auditArea">Área</label>
+            <select id="auditArea"></select>
+            <label class="sr-only" for="auditAccion">Acción</label>
+            <select id="auditAccion"></select>
+            <button type="button" class="btn-ghost btn-sm" id="btnAuditRecargar">Actualizar</button>
+        </div>
+        <div class="table-wrap audit-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha y hora</th>
+                        <th scope="col">Usuario</th>
+                        <th scope="col">Acción</th>
+                        <th scope="col">Detalle</th>
+                        <th scope="col" class="col-hide-sm">Área</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTbody"></tbody>
+            </table>
+            <div id="auditEstado"></div>
+        </div>
+        <div class="pagination">
+            <div class="pagination-info" id="auditInfo" aria-live="polite">&nbsp;</div>
+            <div class="pagination-buttons">
+                <button type="button" class="page-btn" id="auditPrev">Anterior</button>
+                <button type="button" class="page-btn" id="auditNext">Siguiente</button>
+            </div>
+        </div>
+    </dialog>
+
+
+    <!-- Gestión de usuarios (solo administradores): GET /users -->
+    <dialog id="modalUsuarios" class="dialog-lg" aria-labelledby="usuariosTitulo">
+        <div class="modal-head">
+            <div>
+                <h2 id="usuariosTitulo">Gestión de usuarios</h2>
+                <p class="modal-sub">Cuentas registradas en el portal. Puedes corregir el correo y el área de cada persona. Solo visible para administradores.</p>
+            </div>
+            <button type="button" class="modal-close" data-cerrar-usuarios aria-label="Cerrar">×</button>
+        </div>
+        <div class="audit-filters users-toolbar">
+            <div class="search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <label class="sr-only" for="usuariosBuscar">Buscar usuario</label>
+                <input type="search" id="usuariosBuscar" placeholder="Buscar por nombre o correo…" autocomplete="off">
+            </div>
+            <button type="button" class="btn-ghost btn-sm" id="btnUsuariosRecargar">Actualizar</button>
+            <button type="button" class="btn-primary btn-sm" id="btnNuevoUsuario">Nuevo usuario</button>
+        </div>
+        <div class="table-wrap audit-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col" class="col-hide-sm">ID</th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Correo</th>
+                        <th scope="col">Departamento</th>
+                        <th scope="col">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usuariosTbody"></tbody>
+            </table>
+            <div id="usuariosEstado"></div>
+        </div>
+        <div class="pagination">
+            <div class="pagination-info" id="usuariosInfo" aria-live="polite">&nbsp;</div>
+        </div>
+    </dialog>
+
+
+    <!-- Editar correo y área de un usuario: PATCH /users/:id -->
+    <dialog id="modalEditarUsuario" class="dialog-sm" aria-labelledby="editarUsuarioTitulo">
+        <form id="formEditarUsuario">
+            <div class="modal-head">
+                <div>
+                    <h2 id="editarUsuarioTitulo">Editar usuario</h2>
+                    <p class="modal-sub" id="editarUsuarioSub"></p>
+                </div>
+                <button type="button" class="modal-close" data-cerrar-editar aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label for="editCorreo">Correo</label>
+                    <input type="email" id="editCorreo" required maxlength="100" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="field">
+                    <label for="editDepartamento">Departamento</label>
+                    <select id="editDepartamento" required aria-describedby="ayudaEditDepartamento"></select>
+                    <small class="field-hint" id="ayudaEditDepartamento">El cambio de área es inmediato: desde su siguiente acción solo verá los documentos de la nueva área.</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-ghost" data-cerrar-editar>Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btnGuardarUsuario">Guardar cambios</button>
                 </div>
             </div>
         </form>
@@ -189,7 +352,7 @@
         <form id="formCrearUsuario" onsubmit="registrarEmpleado(event)">
             <div class="modal-head">
                 <div>
-                    <h2 id="adminTitulo">Gestión de personal</h2>
+                    <h2 id="adminTitulo">Nuevo usuario</h2>
                     <p class="modal-sub">Registra una nueva cuenta de empleado.</p>
                 </div>
                 <button type="button" class="modal-close" onclick="cerrarModalAdmin()" aria-label="Cerrar">×</button>
@@ -208,11 +371,10 @@
                         <label for="regDepartamento">Departamento</label>
                         <select id="regDepartamento" required>
                             <option value="">Selecciona...</option>
-                            <option value="Ventas">Ventas</option>
-                            <option value="Recursos Humanos">Recursos Humanos</option>
-                            <option value="Gerencia">Gerencia</option>
-                            <option value="Producción">Producción</option>
                             <option value="Contabilidad">Contabilidad</option>
+                            <option value="Recursos Humanos">Recursos Humanos</option>
+                            <option value="SST">SST</option>
+                            <option value="Gerencia">Gerencia</option>
                         </select>
                     </div>
                     <div class="field">
@@ -251,16 +413,47 @@
         </div>
     </dialog>
 
+
+    <!-- Resultado de una carga de carpeta con archivos omitidos -->
+    <dialog id="modalResumen" class="dialog-sm" aria-labelledby="resumenTitulo" aria-describedby="resumenMensaje">
+        <div class="confirm">
+            <span class="confirm-ico is-warn" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+            <h2 id="resumenTitulo">Carga completada con avisos</h2>
+            <p id="resumenMensaje"></p>
+            <ul class="omitidos" id="resumenOmitidos"></ul>
+            <div class="modal-actions">
+                <button type="button" class="btn-primary" id="btnResumenOk">Entendido</button>
+            </div>
+        </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite" popover="manual"></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         const API_BASE = window.location.origin;
-        const API_DOCUMENTOS = `${API_BASE}/documents`;   
-        const AREAS_BASE = ['Contabilidad', 'Producción', 'Recursos Humanos'];
+        const API_DOCUMENTOS = `${API_BASE}/documents`;
+        const API_CARPETAS = `${API_BASE}/folders`;
+        const API_LOGS = `${API_BASE}/logs`;
+        const API_USUARIOS = `${API_BASE}/users`;
+        // Áreas que el administrador ve siempre (aunque aún no tengan archivos)
+        // Debe coincidir con src/common/departamentos.ts (el backend solo acepta estas áreas)
+        const DEPARTAMENTOS = ['Contabilidad', 'Recursos Humanos', 'SST', 'Gerencia'];
         const POR_PAGINA = 6;
         // Deben coincidir con src/documents/upload.config.ts (el backend es quien valida de verdad)
         const EXT_PERMITIDAS = ['pdf','doc','docx','xls','xlsx','ppt','pptx','csv','jpg','jpeg','png','webp'];
         const TAMANO_MAX_MB = 35;
+        // Carga de carpetas: lotes por debajo de MAX_ARCHIVOS_POR_LOTE (20) y TAMANO_MAXIMO_LOTE_MB (100)
+        const LOTE_MAX_ARCHIVOS = 20;
+        const LOTE_MAX_BYTES = 90 * 1024 * 1024; // margen para la cabecera multipart
+        const LOGS_POR_PAGINA = 12;
+        const ACCIONES = {
+            UPLOAD_DOCUMENT: 'Subió documento',
+            DELETE_DOCUMENT: 'Eliminó documento',
+            CREATE_FOLDER: 'Creó carpeta',
+            RENAME_FOLDER: 'Renombró carpeta',
+            UPDATE_USER: 'Editó usuario',
+        };
 
         async function mensajeError(res, porDefecto) {
             try {
@@ -269,10 +462,9 @@
                 return m || porDefecto;
             } catch { return porDefecto; }
         }
-        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
         const estado = {
-            docs: [], area: 'Todos', q: '', desde: '', hasta: '',
+            docs: [], carpetas: [], area: 'Todos', carpeta: null, q: '', desde: '', hasta: '',
             orden: 'fecha', dir: 'desc', pagina: 1, cargando: true, error: false
         };
 
@@ -280,19 +472,22 @@
 
         const $ = (id) => document.getElementById(id);
         const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
         const slug = (s) => norm(s).trim().replace(/\s+/g, '-');
         const pad = (n) => String(n).padStart(2, '0');
 
+        function esAdmin() {
+            const rol = (sesion && sesion.rol ? sesion.rol : '').toLowerCase().trim();
+            return rol === 'admin' || rol === 'administrador';
+        }
+
         function normalizarDepartamento(nombre) {
             if (!nombre) return 'General';
-            const str = String(nombre).toLowerCase();
-            if (str.includes('produc')) return 'Producción';
-            if (str.includes('recursos') || str.includes('rrhh')) return 'Recursos Humanos';
-            if (str.includes('contabilid')) return 'Contabilidad';
-            if (str.includes('ventas')) return 'Ventas';
-            if (str.includes('gerencia')) return 'Gerencia';
-            return nombre;
+            // Nombre oficial sin distinguir mayúsculas ni tildes ("sst" → "SST")
+            const oficial = DEPARTAMENTOS.find(d => norm(d) === norm(nombre).trim());
+            if (oficial) return oficial;
+            if (norm(nombre).includes('rrhh')) return 'Recursos Humanos';
+            return nombre; // área antigua (p. ej. "Producción"): se muestra tal cual
         }
 
         function parseFecha(v) {
@@ -314,6 +509,7 @@
         const mismoDia = (a, b) => !!a && !!b && a.toDateString() === b.toDateString();
 
         const fmtFecha = (d) => d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : '—';
+        const fmtFechaHora = (d) => d && !isNaN(d) ? `${fmtFecha(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}` : '—';
 
         function relativo(d) {
             if (!d) return '';
@@ -390,6 +586,12 @@
 
         const ICO_DESCARGAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>';
         const ICO_ELIMINAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+        const RUTA_CARPETA = '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>';
+        const ICO_CARPETA = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUTA_CARPETA}</svg>`;
+        const ICO_CARPETA_SM = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUTA_CARPETA}</svg>`;
+        const ICO_USUARIO_XS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        const ICO_EDIFICIO_XS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg>';
+        const ICO_EDITAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 
         function leerSesion() {
             const raw = localStorage.getItem('usuarioActiva');
@@ -412,6 +614,7 @@
         }
 
         const authHeaders = () => sesion && sesion.token ? { Authorization: `Bearer ${sesion.token}` } : {};
+        const jsonHeaders = () => ({ ...authHeaders(), 'Content-Type': 'application/json' });
 
         function cerrarSesion() {
             localStorage.removeItem('usuarioActiva');
@@ -422,7 +625,8 @@
         function pintarUsuario() {
             const primerNombre = sesion.nombre.split(' ')[0];
             $('userNameDisplay').textContent = sesion.nombre;
-            $('userAvatar').textContent = iniciales(sesion.nombre);$('userRoleDisplay').textContent = sesion.rol ? sesion.rol.charAt(0) + sesion.rol.slice(1).toLowerCase() : '';
+            $('userAvatar').textContent = iniciales(sesion.nombre);
+            $('userRoleDisplay').textContent = sesion.rol ? sesion.rol.charAt(0) + sesion.rol.slice(1).toLowerCase() : '';
             $('saludo').textContent = `Hola, ${primerNombre}`;
         }
 
@@ -435,9 +639,19 @@
                 nombre: d.nombre || d.originalname || d.filename || d.name || '__',
                 subidoPor: d.subidoPor || (d.usuario && d.usuario.nombre) || (d.user && d.user.nombre) || '—',
                 departamento: normalizarDepartamento(d.departamento || d.area),
+                carpetaId: d.carpetaId == null ? null : Number(d.carpetaId),
                 fecha,
-                fechaSubida,
-                url: d.url || d.path || d.urlArchivo || d.enlace || (d.filename ? `http://localhost:3000/uploads/${d.filename}` : '')
+                fechaSubida
+            };
+        }
+
+        function normalizarCarpeta(c) {
+            return {
+                id: Number(c.id),
+                nombre: c.nombre,
+                departamento: normalizarDepartamento(c.departamento),
+                padreId: c.padreId == null ? null : Number(c.padreId),
+                creadoPor: c.creadoPor || '—'
             };
         }
 
@@ -445,12 +659,19 @@
             estado.cargando = true; estado.error = false;
             render();
             try {
-                const res = await fetch(API_DOCUMENTOS, { headers: authHeaders() });
-                if (res.status === 401) { cerrarSesion(); return; }
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
+                const [resDocs, resCarpetas] = await Promise.all([
+                    fetch(API_DOCUMENTOS, { headers: authHeaders() }),
+                    fetch(API_CARPETAS, { headers: authHeaders() }),
+                ]);
+                if (resDocs.status === 401 || resCarpetas.status === 401) { cerrarSesion(); return; }
+                if (!resDocs.ok) throw new Error('HTTP ' + resDocs.status);
+                if (!resCarpetas.ok) throw new Error('HTTP ' + resCarpetas.status);
+                const data = await resDocs.json();
                 const lista = Array.isArray(data) ? data : (data.documentos || data.data || []);
                 estado.docs = lista.map(normalizarDoc);
+                estado.carpetas = (await resCarpetas.json()).map(normalizarCarpeta);
+                // Si la carpeta abierta ya no existe, se vuelve a la raíz del área
+                if (estado.carpeta !== null && !carpetaPorId(estado.carpeta)) estado.carpeta = null;
             } catch (err) {
                 console.error('Error al conectar con la API de documentos:', err);
                 estado.error = true;
@@ -460,48 +681,114 @@
             render();
         }
 
-        function areasDisponibles() {
-            const extra = estado.docs.map(d => d.departamento).filter(a => a && !AREAS_BASE.includes(a));
-            return [...AREAS_BASE, ...new Set(extra)];
+        /* ---------------- Carpetas (árbol armado a partir de la lista plana) ---------------- */
+
+        const carpetaPorId = (id) => estado.carpetas.find(c => c.id === id) || null;
+
+        const subcarpetas = (padreId, area) => estado.carpetas
+            .filter(c => c.padreId === padreId && c.departamento === area)
+            .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base', numeric: true }));
+
+        /** Carpetas desde la raíz del área hasta `id` (incluida). */
+        function cadenaCarpetas(id) {
+            const cadena = [];
+            let c = carpetaPorId(id);
+            while (c && cadena.length < 50) {
+                cadena.unshift(c);
+                c = c.padreId === null ? null : carpetaPorId(c.padreId);
+            }
+            return cadena;
         }
 
-function prepararFiltros() {
-    $('filtroDesde').value = estado.desde;
-    $('filtroHasta').value = estado.hasta;
-    $('selectArea').innerHTML = areasDisponibles().map(a => `<option>${esc(a)}</option>`).join('');
-}
+        /** Ids de la carpeta y de todas sus subcarpetas. */
+        function descendientes(id) {
+            const ids = new Set([id]);
+            let cambio = true;
+            while (cambio) {
+                cambio = false;
+                for (const c of estado.carpetas) {
+                    if (c.padreId !== null && ids.has(c.padreId) && !ids.has(c.id)) { ids.add(c.id); cambio = true; }
+                }
+            }
+            return ids;
+        }
 
-function filtrados() {
-    const q = norm(estado.q).trim();
-    
-    // Fechas en formato Objeto Date para comparación
-    const dDesde = estado.desde ? new Date(estado.desde + 'T00:00:00') : null;
-    const dHasta = estado.hasta ? new Date(estado.hasta + 'T23:59:59') : null;
+        const rutaCarpeta = (id) => cadenaCarpetas(id).map(c => c.nombre).join(' / ');
+        const ubicacionTexto = (area, carpetaId) => [area, ...cadenaCarpetas(carpetaId).map(c => c.nombre)].join(' › ');
 
-    let lista = estado.docs.filter(d => {
-        if (estado.area !== 'Todos' && d.departamento !== estado.area) return false;
-        if (q && !norm(d.nombre).includes(q)) return false;
-        
-        // Filtro por rango de fechas (Desde - Hasta)
-        if (dDesde && (!d.fecha || d.fecha < dDesde)) return false;
-        if (dHasta && (!d.fecha || d.fecha > dHasta)) return false;
-        
-        return true;
-    });
+        function contarArchivos(id) {
+            const ids = descendientes(id);
+            return estado.docs.filter(d => ids.has(d.carpetaId)).length;
+        }
 
-    const dir = estado.dir === 'asc' ? 1 : -1;
-    lista.sort((a, b) => {
-        if (estado.orden === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
-        return dir * ((a.fecha ? a.fecha.getTime() : 0) - (b.fecha ? b.fecha.getTime() : 0));
-    });
-    return lista;
-}
+        function irACarpeta(id) {
+            estado.carpeta = id;
+            estado.pagina = 1;
+            render();
+        }
+
+        function areasDisponibles() {
+            // Un usuario que no es administrador solo trabaja con su propia área
+            if (!esAdmin()) return [normalizarDepartamento(sesion.departamento)];
+            const extra = [...estado.docs, ...estado.carpetas].map(x => x.departamento).filter(a => a && !DEPARTAMENTOS.includes(a));
+            return [...DEPARTAMENTOS, ...new Set(extra)];
+        }
+
+        function prepararFiltros() {
+            $('filtroDesde').value = estado.desde;
+            $('filtroHasta').value = estado.hasta;
+        }
+
+        const filtrosActivos = () => !!(norm(estado.q).trim() || estado.desde || estado.hasta);
+
+        function filtrados() {
+            const q = norm(estado.q).trim();
+
+            // Fechas en formato Objeto Date para comparación
+            const dDesde = estado.desde ? new Date(estado.desde + 'T00:00:00') : null;
+            const dHasta = estado.hasta ? new Date(estado.hasta + 'T23:59:59') : null;
+
+            // Dentro de un área: sin filtros se ve solo el nivel actual; con búsqueda o
+            // fechas se busca también en todas las subcarpetas de la carpeta abierta.
+            const enArea = estado.area !== 'Todos';
+            const conFiltros = filtrosActivos();
+            const alcance = enArea && conFiltros && estado.carpeta !== null ? descendientes(estado.carpeta) : null;
+
+            let lista = estado.docs.filter(d => {
+                if (enArea) {
+                    if (d.departamento !== estado.area) return false;
+                    if (!conFiltros && d.carpetaId !== estado.carpeta) return false;
+                    if (alcance && !alcance.has(d.carpetaId)) return false;
+                }
+                if (q && !norm(d.nombre).includes(q)) return false;
+
+                // Filtro por rango de fechas (Desde - Hasta)
+                if (dDesde && (!d.fecha || d.fecha < dDesde)) return false;
+                if (dHasta && (!d.fecha || d.fecha > dHasta)) return false;
+
+                return true;
+            });
+
+            const dir = estado.dir === 'asc' ? 1 : -1;
+            lista.sort((a, b) => {
+                if (estado.orden === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+                return dir * ((a.fecha ? a.fecha.getTime() : 0) - (b.fecha ? b.fecha.getTime() : 0));
+            });
+            return lista;
+        }
+
+        /** Subcarpetas del nivel actual (las carpetas no tienen fecha: se ocultan al filtrar por fechas). */
+        function carpetasVisibles() {
+            if (estado.area === 'Todos' || estado.desde || estado.hasta) return [];
+            const q = norm(estado.q).trim();
+            return subcarpetas(estado.carpeta, estado.area).filter(c => !q || norm(c.nombre).includes(q));
+        }
 
         function pintarResumen() {
             const docs = estado.docs;
             if (!docs.length) {
                 ['statTotal', 'statReciente'].forEach(id => $(id).textContent = '0');
-                $('statArea').textContent = '–';$('statUltimo').textContent = '–';
+                $('statArea').textContent = '–'; $('statUltimo').textContent = '–';
                 ['statTotalSub', 'statAreaSub', 'statUltimoSub'].forEach(id => $(id).innerHTML = '&nbsp;');
                 return;
             }
@@ -526,7 +813,7 @@ function filtrados() {
 
         function pintarTabs() {
             const conteo = (a) => a === 'Todos' ? estado.docs.length : estado.docs.filter(d => d.departamento === a).length;
-            const items = ['Todos', ...areasDisponibles()];
+            const items = esAdmin() ? ['Todos', ...areasDisponibles()] : areasDisponibles();
             $('tabs').innerHTML = items.map(a => `
                 <button type="button" role="tab" class="tab" data-area="${esc(a)}" aria-selected="${a === estado.area}">
                     ${a === 'Todos' ? 'Todos los archivos' : esc(a)}
@@ -534,8 +821,42 @@ function filtrados() {
                 </button>`).join('');
         }
 
+        function pintarExplorador() {
+            const enArea = estado.area !== 'Todos';
+            $('explorador').hidden = !enArea;
+            const contenedor = $('carpetas');
+            if (!enArea) { contenedor.hidden = true; contenedor.innerHTML = ''; return; }
+
+            const cadena = estado.carpeta === null ? [] : cadenaCarpetas(estado.carpeta);
+            const raiz = cadena.length
+                ? `<li><button type="button" class="crumb" data-ir-carpeta="">${ICO_CARPETA_SM}${esc(estado.area)}</button></li>`
+                : `<li><span class="crumb is-current" aria-current="page">${ICO_CARPETA_SM}${esc(estado.area)}</span></li>`;
+            $('migas').innerHTML = raiz + cadena.map((c, i) => i === cadena.length - 1
+                ? `<li><span class="crumb is-current" aria-current="page" title="${esc(c.nombre)}">${esc(c.nombre)}</span></li>`
+                : `<li><button type="button" class="crumb" data-ir-carpeta="${c.id}" title="${esc(c.nombre)}">${esc(c.nombre)}</button></li>`).join('');
+
+            const visibles = estado.cargando || estado.error ? [] : carpetasVisibles();
+            contenedor.hidden = !visibles.length;
+            contenedor.innerHTML = visibles.map(c => {
+                const archivos = contarArchivos(c.id);
+                const subs = subcarpetas(c.id, c.departamento).length;
+                const meta = `${archivos} archivo${archivos === 1 ? '' : 's'}` + (subs ? ` · ${subs} carpeta${subs === 1 ? '' : 's'}` : '');
+                return `
+                <div class="folder-card" role="listitem">
+                    <button type="button" class="folder-open" data-abrir-carpeta="${c.id}" title="Abrir ${esc(c.nombre)}">
+                        <span class="folder-ico">${ICO_CARPETA}</span>
+                        <span class="folder-body">
+                            <span class="folder-name">${resaltar(c.nombre, estado.q)}</span>
+                            <span class="folder-meta">${meta}</span>
+                        </span>
+                    </button>
+                    <button type="button" class="folder-edit" data-renombrar-carpeta="${c.id}" title="Renombrar" aria-label="Renombrar ${esc(c.nombre)}">${ICO_EDITAR}</button>
+                </div>`;
+            }).join('');
+        }
+
         function pintarEncabezadosOrden() {
-            document.querySelectorAll('th[data-col]').forEach(th => {
+            document.querySelectorAll('#panel th[data-col]').forEach(th => {
                 const activo = th.dataset.col === estado.orden;
                 th.setAttribute('aria-sort', activo ? (estado.dir === 'asc' ? 'ascending' : 'descending') : 'none');
                 th.querySelector('.sort-arrow').textContent = activo && estado.dir === 'asc' ? '▲' : '▼';
@@ -543,22 +864,25 @@ function filtrados() {
         }
 
         const ICONO_VACIO = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+        const ICONO_CARPETA_VACIA = `<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUTA_CARPETA}</svg>`;
+        const BOTONES_VACIO = '<div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivos</button><button type="button" class="btn-ghost" data-nueva-carpeta>Nueva carpeta</button></div>';
 
         function pintarEstado(html) { $('estado').innerHTML = html; }
 
         function render() {
             const tbody = $('tbody');
             pintarTabs();
+            pintarExplorador();
             pintarEncabezadosOrden();
             pintarResumen();
             $('btnLimpiar').hidden = !(estado.q || estado.desde || estado.hasta);
-            
+
 
             if (estado.cargando) {
                 tbody.innerHTML = Array.from({ length: 5 }, () =>
                     `<tr class="skeleton"><td><div style="width:70%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td><td class="col-hide-md"><div style="width:60%"></div></td><td><div style="width:60%"></div></td><td><div style="width:40%"></div></td></tr>`).join('');
                 pintarEstado('');
-                $('contadorArchivos').innerHTML = '&nbsp;';$('paginacion').innerHTML = '';
+                $('contadorArchivos').innerHTML = '&nbsp;'; $('paginacion').innerHTML = '';
                 return;
             }
 
@@ -570,7 +894,7 @@ function filtrados() {
                     <div class="state-actions">
                         <button type="button" class="btn-primary" id="btnReintentar">Reintentar</button>
                     </div></div>`);
-                $('contadorArchivos').innerHTML = '&nbsp;';$('paginacion').innerHTML = '';
+                $('contadorArchivos').innerHTML = '&nbsp;'; $('paginacion').innerHTML = '';
                 return;
             }
 
@@ -582,35 +906,54 @@ function filtrados() {
 
             if (!visibles.length) {
                 tbody.innerHTML = '';
-                const hayFiltros = estado.q || estado.desde || estado.hasta || estado.area !== 'Todos';
-                pintarEstado(hayFiltros
-                    ? `<div class="state">${ICONO_VACIO}<h3>No encontramos documentos</h3><p>Prueba con otro nombre, otra área o quita los filtros de fecha.</p></div>`
-                    : `<div class="state">${ICONO_VACIO}<h3>Aún no hay documentos</h3><p>Sube el primer archivo para empezar a organizar la documentación.</p><div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivo</button></div></div>`);
+                const enArea = estado.area !== 'Todos';
+                if (filtrosActivos()) {
+                    pintarEstado(`<div class="state">${ICONO_VACIO}<h3>No encontramos documentos</h3><p>Prueba con otro nombre, otra área o quita los filtros de fecha.</p></div>`);
+                } else if (carpetasVisibles().length) {
+                    pintarEstado('<div class="state state-sm"><p>No hay archivos sueltos en este nivel. Abre una carpeta o sube un archivo aquí.</p></div>');
+                } else if (enArea && estado.carpeta !== null) {
+                    pintarEstado(`<div class="state">${ICONO_CARPETA_VACIA}<h3>Esta carpeta está vacía</h3><p>Sube archivos o crea una subcarpeta para organizarla.</p>${BOTONES_VACIO}</div>`);
+                } else if (enArea) {
+                    pintarEstado(`<div class="state">${ICONO_VACIO}<h3>Aún no hay documentos en ${esc(estado.area)}</h3><p>Sube el primer archivo o crea carpetas para organizar la documentación del área.</p>${BOTONES_VACIO}</div>`);
+                } else {
+                    pintarEstado(`<div class="state">${ICONO_VACIO}<h3>Aún no hay documentos</h3><p>Sube el primer archivo para empezar a organizar la documentación.</p><div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivo</button></div></div>`);
+                }
                 $('contadorArchivos').textContent = `Mostrando 0 de ${estado.docs.length} archivos`;
                 $('paginacion').innerHTML = '';
                 return;
             }
 
             pintarEstado('');
-            // Evaluar el rol del usuario conectado
-            const rolSesion = (sesion && sesion.rol ? sesion.rol : '').toLowerCase().trim();
-            const esAdmin = (rolSesion === 'admin' || rolSesion === 'administrador');
+            const admin = esAdmin();
+            // Dentro de un área todos los archivos son de esa área: solo se apila en "Todos"
+            const apilarArea = estado.area === 'Todos';
 
             tbody.innerHTML = visibles.map(d => {
                 const t = tipoArchivo(d.nombre);
                 const rel = relativo(d.fecha);
-            
+                // Ubicación visible cuando el archivo no está en el nivel que se está mostrando
+                const ubicacion = d.carpetaId !== null && (estado.area === 'Todos' || d.carpetaId !== estado.carpeta)
+                    ? rutaCarpeta(d.carpetaId) : '';
+
+                // Datos apilados bajo el nombre (quién lo subió • área). El CSS solo los
+                // muestra cuando las columnas "Subido por" / "Área" están ocultas.
+                const metaPor = d.subidoPor && d.subidoPor !== '—'
+                    ? `<span class="meta-por">${ICO_USUARIO_XS}<span class="sr-only">Subido por </span>${esc(d.subidoPor)}</span>` : '';
+                const metaArea = apilarArea && d.departamento
+                    ? `<span class="meta-area">${ICO_EDIFICIO_XS}<span class="sr-only">Área </span>${esc(d.departamento)}</span>` : '';
+                const meta = metaPor || metaArea ? `<span class="file-meta"><span class="file-meta-in">${metaPor}${metaArea}</span></span>` : '';
+
                 const accionDescargar = `<button type="button" class="action-link" data-descargar="${d.id}" data-nombre="${esc(d.nombre)}" title="Descargar" aria-label="Descargar ${esc(d.nombre)}">${ICO_DESCARGAR}<span class="act-txt">Descargar</span></button>`;
 
                 // El botón Eliminar solo se dibuja si el usuario es Administrador
-                const accionEliminar = esAdmin
+                const accionEliminar = admin
                     ? `<button type="button" class="action-link is-danger" data-eliminar="${d.id}" title="Eliminar" aria-label="Eliminar ${esc(d.nombre)}">${ICO_ELIMINAR}<span class="act-txt">Eliminar</span></button>`
                     : '';
 
                 const accion = `<div class="actions">${accionDescargar}${accionEliminar}</div>`;
                 return `
                 <tr>
-                    <td><div class="file-cell"><span class="file-ico ${t.clase}" aria-hidden="true">${esc(t.ext)}</span><span class="file-name">${resaltar(d.nombre, estado.q)}</span></div></td>
+                    <td><div class="file-cell"><span class="file-ico ${t.clase}" aria-hidden="true">${esc(t.ext)}</span><span class="file-text"><span class="file-name">${resaltar(d.nombre, estado.q)}</span>${meta}${ubicacion ? `<span class="file-path">${ICO_CARPETA_SM}${esc(ubicacion)}</span>` : ''}</span></div></td>
                     <td class="col-hide-sm">${d.departamento ? `<span class="chip a-${slug(d.departamento)}">${esc(d.departamento)}</span>` : '—'}</td>
                     <td class="col-hide-md"><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(d.subidoPor))}</span>${esc(d.subidoPor)}</div></td>
                     <td class="date">${fmtFecha(d.fecha)}${
@@ -639,72 +982,160 @@ function filtrados() {
                 `<button type="button" class="page-btn" data-pag="${p + 1}" ${p === total ? 'disabled' : ''}>Siguiente</button>`;
         }
 
+        /* ------------------------------- Subida ------------------------------- */
+
         const modal = $('modalSubir');
         const inputArchivo = $('inputArchivo');
+        const inputCarpeta = $('inputCarpeta');
 
-function abrirModal() {
-    $('formSubir').reset();
-    $('inputFechaDocumento').max = hoyISO();
-    textoDrop();
+        // { tipo: 'archivo' | 'carpeta', nombre, validos: [{ file, ruta }], omitidos: [{ ruta, motivo }] }
+        let seleccion = null;
+        let subiendo = false;
 
-    const selectArea = $('selectArea');
-    const rol = (sesion.rol || '').toLowerCase().trim();
-    const esAdmin = (rol === 'admin' || rol === 'administrador');
-
-    if (esAdmin) {
-        
-        const areas = areasDisponibles();
-        selectArea.innerHTML = areas.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
-        if (areas.includes(sesion.departamento)) {
-            selectArea.value = sesion.departamento;
+        function motivoLocal(file) {
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            if (!file.name.includes('.') || !EXT_PERMITIDAS.includes(ext)) return 'Formato no permitido';
+            if (file.size > TAMANO_MAX_MB * 1024 * 1024) return `Pesa más de ${TAMANO_MAX_MB} MB`;
+            if (file.size === 0) return 'El archivo está vacío';
+            return null;
         }
-        selectArea.disabled = false;
-    } else {
-               selectArea.innerHTML = `<option value="${esc(sesion.departamento)}">${esc(sesion.departamento)}</option>`;
-        selectArea.value = sesion.departamento;
-        selectArea.disabled = true;
-    }
 
-    modal.showModal();
-}
+        function seleccionarArchivo(file) {
+            seleccion = file ? { tipo: 'archivo', nombre: file.name, validos: [{ file, ruta: file.name }], omitidos: [] } : null;
+            inputCarpeta.value = '';
+            textoDrop();
+        }
 
-        function cerrarModal() { modal.close(); }
+        function seleccionarCarpeta(files) {
+            inputArchivo.value = '';
+            if (!files.length) { seleccion = null; textoDrop(); return; }
+            const validos = [], omitidos = [];
+            for (const file of files) {
+                // webkitRelativePath = "Contratos/2026/contrato.pdf" (incluye la carpeta elegida)
+                const ruta = file.webkitRelativePath || file.name;
+                const motivo = motivoLocal(file);
+                if (motivo) omitidos.push({ ruta, motivo }); else validos.push({ file, ruta });
+            }
+            const nombre = (files[0].webkitRelativePath || '').split('/')[0] || 'Carpeta';
+            seleccion = { tipo: 'carpeta', nombre, validos, omitidos };
+            textoDrop();
+        }
 
         function textoDrop() {
-            const f = inputArchivo.files[0];
-            $('dropTexto').innerHTML = f
-                ? `<span class="picked">${esc(f.name)}</span><br><label class="pick" for="inputArchivo">Cambiar archivo</label>`
-                : '<strong>Arrastra el archivo aquí</strong><br>o <label class="pick" for="inputArchivo">búscalo en tu equipo</label>';
+            const opciones = 'elige <label class="pick" for="inputArchivo">un archivo</label> o <label class="pick" for="inputCarpeta">una carpeta completa</label>';
+            if (!seleccion) {
+                $('dropTexto').innerHTML = `<strong>Arrastra un archivo aquí</strong><br>o ${opciones}`;
+            } else if (seleccion.tipo === 'archivo') {
+                $('dropTexto').innerHTML = `<span class="picked">${esc(seleccion.nombre)}</span><br>Cambiar: ${opciones}`;
+            } else {
+                const n = seleccion.validos.length, omit = seleccion.omitidos.length;
+                $('dropTexto').innerHTML = `<span class="picked picked-folder">${ICO_CARPETA_SM}${esc(seleccion.nombre)}</span>` +
+                    `<span class="meta">${n} archivo${n === 1 ? '' : 's'} para subir${omit ? ` · ${omit} se omitirán (formato no permitido, vacíos o de más de ${TAMANO_MAX_MB} MB)` : ''}</span>` +
+                    `Cambiar: ${opciones}`;
+            }
+        }
+
+        /** Dentro de un área: la carpeta abierta. En "Todos" (solo administradores): la raíz del área elegida. */
+        function destinoSubida() {
+            if (estado.area !== 'Todos') return { area: estado.area, carpetaId: estado.carpeta };
+            return { area: $('selectArea').value, carpetaId: null };
+        }
+
+        function pintarDestino() {
+            const d = destinoSubida();
+            $('destinoSubida').innerHTML = `${ICO_CARPETA_SM}<span>Se guardará en <strong>${esc(ubicacionTexto(d.area, d.carpetaId))}</strong></span>`;
+        }
+
+        /** Añade el destino al formulario. El área solo la envía el administrador: para el resto el servidor usa siempre la suya. */
+        function anexarDestino(fd, destino) {
+            if (destino.carpetaId !== null) fd.append('carpetaId', String(destino.carpetaId));
+            else if (esAdmin()) fd.append('departamento', destino.area);
+        }
+
+        function progreso(hechos, total) {
+            const caja = $('progresoSubida');
+            if (hechos === null) { caja.hidden = true; return; }
+            const pct = total ? Math.round(hechos / total * 100) : 0;
+            caja.hidden = false;
+            $('progresoBarra').style.width = `${pct}%`;
+            $('progresoBarraWrap').setAttribute('aria-valuenow', String(pct));
+            $('progresoTexto').textContent = `${hechos} de ${total} archivos procesados`;
+        }
+
+        function abrirModal() {
+            $('formSubir').reset();
+            seleccion = null;
+            $('inputFechaDocumento').max = hoyISO();
+            textoDrop();
+            progreso(null);
+
+            const selectArea = $('selectArea');
+            const areas = areasDisponibles();
+            selectArea.innerHTML = areas.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+
+            if (estado.area !== 'Todos') {
+                // Se sube a la carpeta abierta: el área es fija
+                selectArea.value = estado.area;
+                selectArea.disabled = true;
+            } else {
+                const propia = normalizarDepartamento(sesion.departamento);
+                if (areas.includes(propia)) selectArea.value = propia;
+                selectArea.disabled = false;
+            }
+            $('campoArea').hidden = selectArea.disabled;
+            pintarDestino();
+
+            modal.showModal();
+        }
+
+        function cerrarModal() { if (!subiendo) modal.close(); }
+
+        function bloquearSubida(activo) {
+            subiendo = activo;
+            $('btnEnviar').disabled = activo;
+            $('btnCancelarSubida').disabled = activo;
+            $('btnCerrarModal').disabled = activo;
+            if (!activo) $('btnEnviar').textContent = 'Subir';
         }
 
         async function subir(e) {
             e.preventDefault();
-            const file = inputArchivo.files[0];
-            if (!file) { aviso('Elige un archivo antes de subirlo.'); return; }
-
-            const ext = (file.name.split('.').pop() || '').toLowerCase();
-            if (!file.name.includes('.') || !EXT_PERMITIDAS.includes(ext)) {
-                aviso(`Formato no permitido. Usa: ${EXT_PERMITIDAS.join(', ')}.`);
-                return;
-            }
-            if (file.size > TAMANO_MAX_MB * 1024 * 1024) {
-                aviso(`El archivo pesa ${(file.size / 1048576).toFixed(1)} MB. El máximo es ${TAMANO_MAX_MB} MB.`);
-                return;
-            }
-
-            const fd = new FormData();
-            fd.append('file', file);
-            fd.append('departamento', $('selectArea').value);
+            if (subiendo) return;
+            if (!seleccion) { aviso('Elige un archivo o una carpeta antes de subir.'); return; }
 
             // Fecha real del documento (opcional). Si no se envía, el backend usa la fecha de hoy.
             const fechaDocumento = $('inputFechaDocumento').value; // 'YYYY-MM-DD' o ''
-            if (fechaDocumento) {
-                if (fechaDocumento > hoyISO()) { aviso('La fecha del documento no puede ser posterior a hoy.'); return; }
-                fd.append('fechaDocumento', fechaDocumento);
-            }
+            if (fechaDocumento && fechaDocumento > hoyISO()) { aviso('La fecha del documento no puede ser posterior a hoy.'); return; }
 
-            const btn = $('btnEnviar');
-            btn.disabled = true; btn.textContent = 'Subiendo…';
+            const destino = destinoSubida();
+            if (!destino.area) { aviso('Elige el área del documento.'); return; }
+
+            if (seleccion.tipo === 'archivo') {
+                const file = seleccion.validos[0].file;
+                const ext = (file.name.split('.').pop() || '').toLowerCase();
+                if (!file.name.includes('.') || !EXT_PERMITIDAS.includes(ext)) {
+                    aviso(`Formato no permitido. Usa: ${EXT_PERMITIDAS.join(', ')}.`);
+                    return;
+                }
+                if (file.size > TAMANO_MAX_MB * 1024 * 1024) {
+                    aviso(`El archivo pesa ${(file.size / 1048576).toFixed(1)} MB. El máximo es ${TAMANO_MAX_MB} MB.`);
+                    return;
+                }
+                await subirArchivo(file, destino, fechaDocumento);
+            } else {
+                if (!seleccion.validos.length) { aviso('La carpeta no contiene archivos con formatos permitidos.'); return; }
+                await subirCarpeta(seleccion, destino, fechaDocumento);
+            }
+        }
+
+        async function subirArchivo(file, destino, fechaDocumento) {
+            const fd = new FormData();
+            fd.append('file', file);
+            anexarDestino(fd, destino);
+            if (fechaDocumento) fd.append('fechaDocumento', fechaDocumento);
+
+            bloquearSubida(true);
+            $('btnEnviar').textContent = 'Subiendo…';
             try {
                 const res = await fetch(`${API_DOCUMENTOS}/upload`, { method: 'POST', headers: authHeaders(), body: fd });
                 if (res.status === 401) { cerrarSesion(); return; }
@@ -712,6 +1143,7 @@ function abrirModal() {
                     aviso(await mensajeError(res, 'No se pudo subir el archivo. Inténtalo de nuevo.'));
                     return;
                 }
+                bloquearSubida(false);
                 cerrarModal();
                 aviso('Archivo subido correctamente.', true);
                 await cargar();
@@ -719,8 +1151,96 @@ function abrirModal() {
                 console.error(err);
                 aviso('No se pudo conectar con el servidor para subir el archivo.');
             } finally {
-                btn.disabled = false; btn.textContent = 'Subir archivo';
+                bloquearSubida(false);
             }
+        }
+
+        /** Agrupa los archivos en lotes que respetan los límites por petición del servidor. */
+        function dividirEnLotes(archivos) {
+            const lotes = [];
+            let actual = [], bytes = 0;
+            for (const a of archivos) {
+                if (actual.length && (actual.length >= LOTE_MAX_ARCHIVOS || bytes + a.file.size > LOTE_MAX_BYTES)) {
+                    lotes.push(actual); actual = []; bytes = 0;
+                }
+                actual.push(a); bytes += a.file.size;
+            }
+            if (actual.length) lotes.push(actual);
+            return lotes;
+        }
+
+        /**
+         * Carga masiva: envía la carpeta en lotes a POST /documents/upload-carpeta. Cada lote lleva
+         * las rutas relativas ("Contratos/2026/a.pdf") y el servidor recrea la jerarquía; los lotes
+         * siguientes reutilizan las carpetas ya creadas.
+         */
+        async function subirCarpeta(sel, destino, fechaDocumento) {
+            const lotes = dividirEnLotes(sel.validos);
+            const total = sel.validos.length;
+            const resumen = { subidos: 0, carpetas: 0, omitidos: [...sel.omitidos] };
+            let procesados = 0;
+
+            bloquearSubida(true);
+            progreso(0, total);
+            try {
+                for (const [i, lote] of lotes.entries()) {
+                    $('btnEnviar').textContent = lotes.length > 1 ? `Subiendo lote ${i + 1} de ${lotes.length}…` : 'Subiendo…';
+
+                    const fd = new FormData();
+                    anexarDestino(fd, destino);
+                    if (fechaDocumento) fd.append('fechaDocumento', fechaDocumento);
+                    fd.append('rutas', JSON.stringify(lote.map(a => a.ruta)));
+                    lote.forEach(a => fd.append('files', a.file, a.file.name));
+
+                    let res;
+                    try {
+                        res = await fetch(`${API_DOCUMENTOS}/upload-carpeta`, { method: 'POST', headers: authHeaders(), body: fd });
+                    } catch (err) {
+                        console.error(err);
+                        lote.forEach(a => resumen.omitidos.push({ ruta: a.ruta, motivo: 'Sin conexión con el servidor' }));
+                        procesados += lote.length; progreso(procesados, total);
+                        continue;
+                    }
+
+                    if (res.status === 401) { cerrarSesion(); return; }
+                    if (res.status === 403 || res.status === 404) {
+                        // Sin permiso sobre el destino: los demás lotes fallarían igual
+                        aviso(await mensajeError(res, 'No tienes permiso para subir a esta ubicación.'));
+                        return;
+                    }
+                    if (!res.ok) {
+                        const motivo = await mensajeError(res, `Error del servidor (${res.status})`);
+                        lote.forEach(a => resumen.omitidos.push({ ruta: a.ruta, motivo }));
+                    } else {
+                        const r = await res.json();
+                        resumen.subidos += r.subidos || 0;
+                        resumen.carpetas += r.carpetasCreadas || 0;
+                        (r.omitidos || []).forEach(o => resumen.omitidos.push(o));
+                    }
+                    procesados += lote.length;
+                    progreso(procesados, total);
+                }
+            } finally {
+                bloquearSubida(false);
+            }
+
+            cerrarModal();
+            await cargar();
+
+            const textoBase = `Se subieron ${resumen.subidos} archivo${resumen.subidos === 1 ? '' : 's'} de «${sel.nombre}»` +
+                (resumen.carpetas ? ` y se crearon ${resumen.carpetas} carpeta${resumen.carpetas === 1 ? '' : 's'}` : '') + '.';
+            if (!resumen.omitidos.length) { aviso(textoBase, true); return; }
+            mostrarResumen(textoBase, resumen.omitidos);
+        }
+
+        function mostrarResumen(texto, omitidos) {
+            const n = omitidos.length;
+            $('resumenMensaje').textContent = `${texto} ${n} archivo${n === 1 ? '' : 's'} no se subi${n === 1 ? 'ó' : 'eron'}:`;
+            const max = 50;
+            $('resumenOmitidos').innerHTML = omitidos.slice(0, max)
+                .map(o => `<li>${esc(o.ruta)}<br><small>${esc(o.motivo)}</small></li>`).join('') +
+                (n > max ? `<li><small>… y ${n - max} más</small></li>` : '');
+            $('modalResumen').showModal();
         }
 
         async function eliminarDocumento(id) {
@@ -753,7 +1273,7 @@ function abrirModal() {
                 console.error(err);
                 aviso('No se pudo eliminar el documento.');
             }
-        }    
+        }
 
         async function descargarDocumento(id, nombreReal) {
             aviso('Iniciando descarga...', true);
@@ -781,7 +1301,279 @@ function abrirModal() {
             }
         }
 
-        
+        /* --------------------------- Crear / renombrar carpeta --------------------------- */
+
+        let carpetaEditando = null; // null = crear una nueva en el nivel actual
+
+        function abrirModalCarpeta(id) {
+            if (estado.area === 'Todos') return;
+            const c = id === null ? null : carpetaPorId(id);
+            carpetaEditando = c ? c.id : null;
+            $('carpetaTitulo').textContent = c ? 'Renombrar carpeta' : 'Nueva carpeta';
+            $('carpetaSub').textContent = c
+                ? `Ubicación: ${ubicacionTexto(c.departamento, c.padreId)}`
+                : `Se creará en: ${ubicacionTexto(estado.area, estado.carpeta)}`;
+            $('inputNombreCarpeta').value = c ? c.nombre : '';
+            $('btnGuardarCarpeta').textContent = c ? 'Guardar nombre' : 'Crear carpeta';
+            $('modalCarpeta').showModal();
+            $('inputNombreCarpeta').select();
+        }
+
+        function cerrarModalCarpeta() { $('modalCarpeta').close(); }
+
+        async function guardarCarpeta(e) {
+            e.preventDefault();
+            const nombre = $('inputNombreCarpeta').value.replace(/\s+/g, ' ').trim();
+            if (!nombre) { aviso('Escribe un nombre para la carpeta.'); return; }
+            if (/[\\/:*?"<>|]/.test(nombre)) { aviso('El nombre no puede contener los caracteres \\ / : * ? " < > |'); return; }
+
+            const editando = carpetaEditando !== null;
+            let peticion;
+            if (editando) {
+                peticion = fetch(`${API_CARPETAS}/${carpetaEditando}`, { method: 'PATCH', headers: jsonHeaders(), body: JSON.stringify({ nombre }) });
+            } else {
+                const cuerpo = { nombre };
+                if (estado.carpeta !== null) cuerpo.padreId = estado.carpeta;   // subcarpeta: hereda el área
+                else if (esAdmin()) cuerpo.departamento = estado.area;          // raíz: el resto usa siempre su área
+                peticion = fetch(API_CARPETAS, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(cuerpo) });
+            }
+
+            const btn = $('btnGuardarCarpeta');
+            const textoBtn = btn.textContent;
+            btn.disabled = true; btn.textContent = editando ? 'Guardando…' : 'Creando…';
+            try {
+                const res = await peticion;
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) { aviso(await mensajeError(res, 'No se pudo guardar la carpeta.')); return; }
+                cerrarModalCarpeta();
+                aviso(editando ? `Carpeta renombrada a «${nombre}».` : `Carpeta «${nombre}» creada.`, true);
+                await cargar();
+            } catch (err) {
+                console.error(err);
+                aviso('No se pudo conectar con el servidor.');
+            } finally {
+                btn.disabled = false; btn.textContent = textoBtn;
+            }
+        }
+
+        /* ------------------------------ Auditoría (admin) ------------------------------ */
+
+        const auditoria = { pagina: 1, area: '', accion: '' };
+
+        function abrirAuditoria() {
+            $('auditArea').innerHTML = '<option value="">Todas las áreas</option>' +
+                areasDisponibles().map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+            $('auditAccion').innerHTML = '<option value="">Todas las acciones</option>' +
+                Object.entries(ACCIONES).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+            $('auditArea').value = auditoria.area;
+            $('auditAccion').value = auditoria.accion;
+            $('modalAuditoria').showModal();
+            cargarAuditoria();
+        }
+
+        async function cargarAuditoria() {
+            const params = new URLSearchParams({ pagina: String(auditoria.pagina), limite: String(LOGS_POR_PAGINA) });
+            if (auditoria.area) params.set('departamento', auditoria.area);
+            if (auditoria.accion) params.set('accion', auditoria.accion);
+
+            $('auditTbody').innerHTML = Array.from({ length: 4 }, () =>
+                '<tr class="skeleton"><td><div style="width:80%"></div></td><td><div style="width:70%"></div></td><td><div style="width:60%"></div></td><td><div style="width:90%"></div></td><td class="col-hide-sm"><div style="width:60%"></div></td></tr>').join('');
+            $('auditEstado').innerHTML = '';
+            $('auditPrev').disabled = $('auditNext').disabled = true;
+
+            try {
+                const res = await fetch(`${API_LOGS}?${params}`, { headers: authHeaders() });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (res.status === 403) {
+                    $('auditTbody').innerHTML = '';
+                    $('auditEstado').innerHTML = `<div class="state">${ICONO_VACIO}<h3>Acceso restringido</h3><p>Solo los administradores pueden consultar la auditoría.</p></div>`;
+                    $('auditInfo').innerHTML = '&nbsp;';
+                    return;
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                pintarAuditoria(await res.json());
+            } catch (err) {
+                console.error('Error al cargar la auditoría:', err);
+                $('auditTbody').innerHTML = '';
+                $('auditEstado').innerHTML = `<div class="state">${ICONO_VACIO}<h3>No pudimos cargar el registro</h3><p>Revisa la conexión con la API y vuelve a intentarlo.</p><div class="state-actions"><button type="button" class="btn-primary" id="btnAuditReintentar">Reintentar</button></div></div>`;
+                $('auditInfo').innerHTML = '&nbsp;';
+            }
+        }
+
+        function pintarAuditoria(r) {
+            const filas = r.data || [];
+            $('auditTbody').innerHTML = filas.map(l => {
+                const area = l.department ? normalizarDepartamento(l.department) : '';
+                return `
+                <tr>
+                    <td class="date">${fmtFechaHora(new Date(l.createdAt))}</td>
+                    <td><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(l.usuario))}</span><span class="by-text">${esc(l.usuario)}${l.correo ? `<small>${esc(l.correo)}</small>` : ''}</span></div></td>
+                    <td><span class="badge b-${esc(l.action)}">${esc(ACCIONES[l.action] || l.action)}</span></td>
+                    <td class="audit-detail">${esc(l.details || '—')}</td>
+                    <td class="col-hide-sm">${area ? `<span class="chip a-${slug(area)}">${esc(area)}</span>` : '—'}</td>
+                </tr>`;
+            }).join('');
+
+            $('auditEstado').innerHTML = filas.length ? '' :
+                `<div class="state">${ICONO_VACIO}<h3>Sin actividad registrada</h3><p>Cuando alguien suba archivos o cree carpetas aparecerá aquí.</p></div>`;
+            $('auditInfo').textContent = r.total
+                ? `Página ${r.pagina} de ${r.totalPaginas} · ${r.total} evento${r.total === 1 ? '' : 's'}`
+                : '';
+            $('auditPrev').disabled = r.pagina <= 1;
+            $('auditNext').disabled = r.pagina >= r.totalPaginas;
+        }
+
+
+        /* -------------------------- Gestión de usuarios (admin) -------------------------- */
+
+        const gestion = { usuarios: [], q: '', editando: null };
+
+        const esRolAdmin = (rol) => ['admin', 'administrador'].includes(norm(rol).trim());
+        const areaValida = (area) => DEPARTAMENTOS.includes(area);
+
+        function abrirGestionUsuarios() {
+            $('modalUsuarios').showModal();
+            cargarUsuarios();
+        }
+
+        // 1. GET /users → filas de la tabla
+        async function cargarUsuarios() {
+            $('usuariosTbody').innerHTML = Array.from({ length: 4 }, () =>
+                '<tr class="skeleton"><td class="col-hide-sm"><div style="width:30%"></div></td><td><div style="width:70%"></div></td><td><div style="width:80%"></div></td><td><div style="width:50%"></div></td><td><div style="width:40%"></div></td></tr>').join('');
+            $('usuariosEstado').innerHTML = '';
+            $('usuariosInfo').innerHTML = '&nbsp;';
+
+            try {
+                const res = await fetch(API_USUARIOS, { headers: authHeaders() });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (res.status === 403) {
+                    gestion.usuarios = [];
+                    $('usuariosTbody').innerHTML = '';
+                    $('usuariosEstado').innerHTML = `<div class="state">${ICONO_VACIO}<h3>Acceso restringido</h3><p>Solo los administradores pueden gestionar usuarios.</p></div>`;
+                    return;
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                gestion.usuarios = await res.json();
+                pintarUsuarios();
+            } catch (err) {
+                console.error('Error al cargar los usuarios:', err);
+                $('usuariosTbody').innerHTML = '';
+                $('usuariosEstado').innerHTML = `<div class="state">${ICONO_VACIO}<h3>No pudimos cargar los usuarios</h3><p>Revisa la conexión con la API y vuelve a intentarlo.</p><div class="state-actions"><button type="button" class="btn-primary" id="btnUsuariosReintentar">Reintentar</button></div></div>`;
+            }
+        }
+
+        function filaUsuario(u) {
+            const area = areaValida(u.departamento)
+                ? `<span class="chip a-${slug(u.departamento)}">${esc(u.departamento)}</span>`
+                // Área antigua (p. ej. "Producción"): el usuario recibe 403 hasta que se le asigne una válida
+                : `<span class="chip is-invalid" title="Esta área ya no existe. Edita al usuario para asignarle una válida.">${esc(u.departamento || 'Sin área')}</span>`;
+            return `
+                <tr data-fila-usuario="${u.id}">
+                    <td class="user-id col-hide-sm">${u.id}</td>
+                    <td><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(u.nombre))}</span><span class="by-text">${esc(u.nombre)}${esRolAdmin(u.rol) ? '<small>Administrador</small>' : ''}</span></div></td>
+                    <td class="user-email">${esc(u.email)}</td>
+                    <td>${area}</td>
+                    <td><button type="button" class="action-link" data-editar-usuario="${u.id}" aria-label="Editar a ${esc(u.nombre)}">${ICO_EDITAR}<span>Editar</span></button></td>
+                </tr>`;
+        }
+
+        function pintarUsuarios() {
+            const q = norm(gestion.q).trim();
+            const filas = q
+                ? gestion.usuarios.filter(u => norm(u.nombre).includes(q) || norm(u.email).includes(q))
+                : gestion.usuarios;
+
+            $('usuariosTbody').innerHTML = filas.map(filaUsuario).join('');
+
+            if (!gestion.usuarios.length) {
+                $('usuariosEstado').innerHTML = `<div class="state">${ICONO_VACIO}<h3>No hay usuarios registrados</h3><p>Crea la primera cuenta con «Nuevo usuario».</p></div>`;
+            } else if (!filas.length) {
+                $('usuariosEstado').innerHTML = `<div class="state">${ICONO_VACIO}<h3>Sin resultados</h3><p>Ningún usuario coincide con «${esc(gestion.q.trim())}».</p></div>`;
+            } else {
+                $('usuariosEstado').innerHTML = '';
+            }
+
+            const total = gestion.usuarios.length;
+            const invalidos = gestion.usuarios.filter(u => !areaValida(u.departamento)).length;
+            $('usuariosInfo').textContent = total
+                ? `${q ? `${filas.length} de ` : ''}${total} usuario${total === 1 ? '' : 's'}` +
+                  (invalidos ? ` · ${invalidos} con un área que ya no existe` : '')
+                : '';
+        }
+
+        // 2. Abrir el modal con los datos del usuario seleccionado
+        function abrirEditarUsuario(id) {
+            const u = gestion.usuarios.find(x => x.id === id);
+            if (!u) return;
+            gestion.editando = u;
+
+            $('editarUsuarioSub').textContent = `${u.nombre} · ID ${u.id}`;
+            $('editCorreo').value = u.email;
+            const select = $('editDepartamento');
+            select.innerHTML =
+                (areaValida(u.departamento) ? '' : '<option value="" disabled>Selecciona un área…</option>') +
+                DEPARTAMENTOS.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+            select.value = areaValida(u.departamento) ? u.departamento : '';
+
+            $('modalEditarUsuario').showModal();
+            $('editCorreo').focus();
+        }
+
+        function cerrarEditarUsuario() {
+            $('modalEditarUsuario').close();
+            gestion.editando = null;
+        }
+
+        // 3. PATCH /users/:id solo con los campos que cambiaron
+        async function guardarUsuario(e) {
+            e.preventDefault();
+            const u = gestion.editando;
+            if (!u) return;
+
+            const email = $('editCorreo').value.trim().toLowerCase();
+            const departamento = $('editDepartamento').value;
+            const cuerpo = {};
+            if (email !== String(u.email).toLowerCase()) cuerpo.email = email;
+            if (departamento !== u.departamento) cuerpo.departamento = departamento;
+
+            if (!Object.keys(cuerpo).length) {
+                cerrarEditarUsuario();
+                aviso('No había cambios que guardar.');
+                return;
+            }
+
+            const btn = $('btnGuardarUsuario');
+            btn.disabled = true; btn.textContent = 'Guardando…';
+            try {
+                const res = await fetch(`${API_USUARIOS}/${u.id}`, {
+                    method: 'PATCH',
+                    headers: jsonHeaders(),
+                    body: JSON.stringify(cuerpo),
+                });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) {
+                    aviso(await mensajeError(res, 'No se pudo actualizar el usuario.'));
+                    if (res.status === 404) { cerrarEditarUsuario(); cargarUsuarios(); }
+                    return;
+                }
+
+                const actualizado = await res.json();
+                gestion.usuarios = gestion.usuarios.map(x => x.id === actualizado.id ? actualizado : x);
+                pintarUsuarios();
+                const fila = document.querySelector(`[data-fila-usuario="${actualizado.id}"]`);
+                if (fila) fila.classList.add('is-updated');
+
+                cerrarEditarUsuario();
+                aviso(`Datos de ${actualizado.nombre} actualizados.`, true);
+            } catch (err) {
+                console.error('Error al actualizar el usuario:', err);
+                aviso('Error de conexión con el servidor.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Guardar cambios';
+            }
+        }
+
+
         function abrirModalAdmin() {
             $('formCrearUsuario').reset();
             $('modalAdmin').showModal();
@@ -791,63 +1583,66 @@ function abrirModal() {
             $('modalAdmin').close();
         }
 
-async function registrarEmpleado(event) {
-    event.preventDefault();
+        async function registrarEmpleado(event) {
+            event.preventDefault();
 
-    const nombre = $('regNombre').value.trim();
-    const correo = $('regCorreo').value.trim();
-    const contrasena = $('regClave').value;
-    const departamento = $('regDepartamento').value;
-    const rol = $('regRol').value;
+            const nombre = $('regNombre').value.trim();
+            const correo = $('regCorreo').value.trim();
+            const contrasena = $('regClave').value;
+            const departamento = $('regDepartamento').value;
+            const rol = $('regRol').value;
 
-    // Validación rápida local en el navegador
-    const regexClave = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    if (!regexClave.test(contrasena)) {
-        aviso('La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y al menos un número.');
-        return;
-    }
+            // Validación rápida local en el navegador
+            const regexClave = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+            if (!regexClave.test(contrasena)) {
+                aviso('La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y al menos un número.');
+                return;
+            }
 
-    const btn = $('btnCrearUsuario');
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
+            const btn = $('btnCrearUsuario');
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
 
-    try {
-        const res = await fetch(`${API_BASE}/usuarios/crear`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sesion.token}`
-            },
-            body: JSON.stringify({ nombre, correo, contrasena, departamento, rol })
-        });
+            try {
+                const res = await fetch(`${API_BASE}/usuarios/crear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sesion.token}`
+                    },
+                    body: JSON.stringify({ nombre, correo, contrasena, departamento, rol })
+                });
 
-        const data = await res.json();
+                const data = await res.json();
 
-        if (!res.ok) {
-            const msg = Array.isArray(data.message) ? data.message.join(' ') : data.message;
-            aviso(msg || 'Ocurrió un error al registrar el usuario.');
-            return;
+                if (!res.ok) {
+                    const msg = Array.isArray(data.message) ? data.message.join(' ') : data.message;
+                    aviso(msg || 'Ocurrió un error al registrar el usuario.');
+                    return;
+                }
+
+                cerrarModalAdmin();
+                aviso(`¡Usuario ${nombre} creado con éxito!`, true);
+                if ($('modalUsuarios').open) cargarUsuarios();
+
+            } catch (error) {
+                console.error('Error al registrar usuario:', error);
+                aviso('Error de conexión con el servidor.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Crear Cuenta de Usuario';
+            }
         }
-
-        cerrarModalAdmin();
-        aviso(`¡Usuario ${nombre} creado con éxito!`, true);
-
-    } catch (error) {
-        console.error('Error al registrar usuario:', error);
-        aviso('Error de conexión con el servidor.');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Crear Cuenta de Usuario';
-    }
-}
 
         function conectarEventos() {
             $('btnCerrarSesion').addEventListener('click', cerrarSesion);
-            $('btnSubirArchivo').addEventListener('click', abrirModal);$('btnSubirArchivo2').addEventListener('click', abrirModal);
+            $('btnSubirArchivo').addEventListener('click', abrirModal);
+            $('btnSubirArchivo2').addEventListener('click', abrirModal);
+            $('btnAuditoria').addEventListener('click', abrirAuditoria);
 
             $('tabs').addEventListener('click', (e) => {
                 const b = e.target.closest('.tab'); if (!b) return;
-                estado.area = b.dataset.area; estado.pagina = 1; render();
+                estado.area = b.dataset.area; estado.carpeta = null; estado.pagina = 1; render();
             });
 
             let debounce;
@@ -883,7 +1678,7 @@ async function registrarEmpleado(event) {
                 render();
             });
 
-            document.querySelector('thead').addEventListener('click', (e) => {
+            document.querySelector('#panel thead').addEventListener('click', (e) => {
                 const b = e.target.closest('[data-sort]'); if (!b) return;
                 const col = b.dataset.sort;
                 if (estado.orden === col) estado.dir = estado.dir === 'asc' ? 'desc' : 'asc';
@@ -910,42 +1705,267 @@ async function registrarEmpleado(event) {
                     return;
                 }
 
+                const btnAbrirCarpeta = e.target.closest('[data-abrir-carpeta]');
+                if (btnAbrirCarpeta) { irACarpeta(+btnAbrirCarpeta.dataset.abrirCarpeta); return; }
+
+                const btnMiga = e.target.closest('[data-ir-carpeta]');
+                if (btnMiga) { irACarpeta(btnMiga.dataset.irCarpeta ? +btnMiga.dataset.irCarpeta : null); return; }
+
+                const btnRenombrar = e.target.closest('[data-renombrar-carpeta]');
+                if (btnRenombrar) { abrirModalCarpeta(+btnRenombrar.dataset.renombrarCarpeta); return; }
+
+                if (e.target.closest('[data-nueva-carpeta]')) { abrirModalCarpeta(null); return; }
+
                 if (e.target.closest('#btnReintentar')) cargar();
                 else if (e.target.closest('[data-abrir-modal]')) abrirModal();
             });
 
-            $('btnCerrarModal').addEventListener('click', cerrarModal);$('btnCancelarSubida').addEventListener('click', cerrarModal);
+            // Diálogo de subida
+            $('btnCerrarModal').addEventListener('click', cerrarModal);
+            $('btnCancelarSubida').addEventListener('click', cerrarModal);
             modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
+            modal.addEventListener('cancel', (e) => { if (subiendo) e.preventDefault(); }); // Escape durante una carga
             $('modalAdmin').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarModalAdmin(); });
             $('formSubir').addEventListener('submit', subir);
-            inputArchivo.addEventListener('change', textoDrop);
+            $('selectArea').addEventListener('change', pintarDestino);
+            inputArchivo.addEventListener('change', () => seleccionarArchivo(inputArchivo.files[0] || null));
+            inputCarpeta.addEventListener('change', () => seleccionarCarpeta([...inputCarpeta.files]));
 
             const dz = $('dropzone');
             ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('is-over'); }));
             ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('is-over'); }));
             dz.addEventListener('drop', (e) => {
-                if (e.dataTransfer.files.length) { inputArchivo.files = e.dataTransfer.files; textoDrop(); }
+                if (subiendo) return;
+                const items = [...(e.dataTransfer.items || [])];
+                const esCarpeta = items.some(it => it.kind === 'file' && typeof it.webkitGetAsEntry === 'function' && it.webkitGetAsEntry()?.isDirectory);
+                if (esCarpeta) { aviso('Para subir una carpeta usa la opción «una carpeta completa».'); return; }
+                if (e.dataTransfer.files.length) seleccionarArchivo(e.dataTransfer.files[0]);
             });
+
+            // Diálogo de carpeta
+            $('formCarpeta').addEventListener('submit', guardarCarpeta);
+            document.querySelectorAll('[data-cerrar-carpeta]').forEach(b => b.addEventListener('click', cerrarModalCarpeta));
+            $('modalCarpeta').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarModalCarpeta(); });
+
+            // Resumen de carga
+            $('btnResumenOk').addEventListener('click', () => $('modalResumen').close());
+
+            // Diálogo de auditoría
+            const dlgAuditoria = $('modalAuditoria');
+            dlgAuditoria.addEventListener('click', (e) => {
+                if (e.target === dlgAuditoria || e.target.closest('[data-cerrar-auditoria]')) { dlgAuditoria.close(); return; }
+                if (e.target.closest('#btnAuditReintentar')) cargarAuditoria();
+            });
+            $('auditArea').addEventListener('change', (e) => { auditoria.area = e.target.value; auditoria.pagina = 1; cargarAuditoria(); });
+            $('auditAccion').addEventListener('change', (e) => { auditoria.accion = e.target.value; auditoria.pagina = 1; cargarAuditoria(); });
+            $('btnAuditRecargar').addEventListener('click', cargarAuditoria);
+            $('auditPrev').addEventListener('click', () => { if (auditoria.pagina > 1) { auditoria.pagina--; cargarAuditoria(); } });
+            $('auditNext').addEventListener('click', () => { auditoria.pagina++; cargarAuditoria(); });
+
+            // Gestión de usuarios
+            $('btnGestionAdmin').addEventListener('click', abrirGestionUsuarios);
+            const dlgUsuarios = $('modalUsuarios');
+            dlgUsuarios.addEventListener('click', (e) => {
+                if (e.target === dlgUsuarios || e.target.closest('[data-cerrar-usuarios]')) { dlgUsuarios.close(); return; }
+                const btnEditar = e.target.closest('[data-editar-usuario]');
+                if (btnEditar) { abrirEditarUsuario(+btnEditar.dataset.editarUsuario); return; }
+                if (e.target.closest('#btnUsuariosReintentar')) cargarUsuarios();
+            });
+            $('btnUsuariosRecargar').addEventListener('click', cargarUsuarios);
+            $('btnNuevoUsuario').addEventListener('click', abrirModalAdmin);
+            let debounceUsuarios;
+            $('usuariosBuscar').addEventListener('input', (e) => {
+                clearTimeout(debounceUsuarios);
+                debounceUsuarios = setTimeout(() => { gestion.q = e.target.value; pintarUsuarios(); }, 150);
+            });
+
+            const dlgEditar = $('modalEditarUsuario');
+            $('formEditarUsuario').addEventListener('submit', guardarUsuario);
+            dlgEditar.addEventListener('click', (e) => {
+                if (e.target === dlgEditar || e.target.closest('[data-cerrar-editar]')) cerrarEditarUsuario();
+            });
+            dlgEditar.addEventListener('close', () => { gestion.editando = null; });
         }
 
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             sesion = leerSesion();
             if (!sesion) { window.location.href = 'login.html'; return; }
             $('anio').textContent = new Date().getFullYear();
-            
+
             pintarUsuario();
 
-            
-            const rol = (sesion.rol || '').toLowerCase().trim();
-            if (rol === 'admin' || rol === 'administrador') {
-                const btnAdmin = $('btnGestionAdmin');
-                if (btnAdmin) btnAdmin.style.display = 'inline-block';
+            if (esAdmin()) {
+                $('btnGestionAdmin').hidden = false;
+                $('btnAuditoria').hidden = false;
+                estado.area = 'Todos';
+            } else {
+                // El servidor solo devuelve los documentos y carpetas de su área
+                estado.area = normalizarDepartamento(sesion.departamento);
+                $('subtitulo').textContent = `Consulta, organiza y sube los archivos de ${estado.area}.`;
             }
 
             conectarEventos();
             prepararFiltros();
+            textoDrop();
             cargar();
+        });
+
+
+        /* ---------- Foto desde el celular → PDF A4 → subida ---------- */
+        const inputCamara = document.getElementById('inputCamara');
+        const textoDropzone = document.getElementById('dropTexto');
+        const selectDepartamento = document.getElementById('selectArea');
+
+        const FOTO_LADO_MAX_PX = 2480; // ≈ 210 ppp en A4: legible y liviano
+        const PDF_MARGEN_MM = 10;
+
+        /** Lee la foto con FileReader y la carga en un <img>. */
+        function leerImagen(archivo) {
+            return new Promise((resolve, reject) => {
+                const lector = new FileReader();
+                lector.onerror = () => reject(new Error('No se pudo leer la foto.'));
+                lector.onload = () => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('El formato de la foto no es compatible.'));
+                    img.src = lector.result;
+                };
+                lector.readAsDataURL(archivo);
+            });
+        }
+
+        /**
+         * Convierte la foto en un PDF A4 con la imagen centrada y proporcional.
+         * Pasa por un canvas para respetar la rotación EXIF del celular (si no, las
+         * fotos verticales quedan acostadas en el PDF) y para reducir el peso.
+         */
+        async function fotoAPdf(foto, nombrePdf) {
+            const { jsPDF } = window.jspdf || {};
+            if (!jsPDF) throw new Error('No se pudo cargar jsPDF. Revisa tu conexión a internet.');
+
+            const img = await leerImagen(foto);
+            const escala = Math.min(1, FOTO_LADO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
+            const ancho = Math.round(img.naturalWidth * escala);
+            const alto = Math.round(img.naturalHeight * escala);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = ancho;
+            canvas.height = alto;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; // fondo blanco para PNG con transparencia
+            ctx.fillRect(0, 0, ancho, alto);
+            ctx.drawImage(img, 0, 0, ancho, alto);
+            const jpeg = canvas.toDataURL('image/jpeg', 0.85);
+
+            const pdf = new jsPDF({ orientation: ancho > alto ? 'l' : 'p', unit: 'mm', format: 'a4' });
+            const paginaAncho = pdf.internal.pageSize.getWidth();
+            const paginaAlto = pdf.internal.pageSize.getHeight();
+            const factor = Math.min(
+                (paginaAncho - 2 * PDF_MARGEN_MM) / ancho,
+                (paginaAlto - 2 * PDF_MARGEN_MM) / alto
+            );
+            const w = ancho * factor;
+            const h = alto * factor;
+            pdf.addImage(jpeg, 'JPEG', (paginaAncho - w) / 2, (paginaAlto - h) / 2, w, h);
+
+            return new File([pdf.output('blob')], nombrePdf, { type: 'application/pdf' });
+        }
+
+        /**
+         * Pregunta el nombre del documento. Si se deja vacío o se cancela, genera uno
+         * automático: Documento_<Área>_<dd-mm-aaaa>.pdf
+         */
+        function pedirNombrePdf(departamento) {
+            const escrito = (prompt('¿Qué nombre deseas darle a este documento?') || '')
+                .replace(/[\\/:*?"<>|]/g, '') // caracteres no válidos en nombres de archivo
+                .replace(/\s+/g, ' ')         // espacios repetidos → uno solo
+                .trim()
+                .replace(/\.pdf$/i, '')       // por si escribe "Factura.pdf"
+                .slice(0, 120)
+                .trim();
+            if (escrito) return `${escrito}.pdf`;
+
+            const hoy = new Date();
+            const dos = (n) => String(n).padStart(2, '0');
+            const fecha = `${dos(hoy.getDate())}-${dos(hoy.getMonth() + 1)}-${hoy.getFullYear()}`;
+            return `Documento_${departamento.replace(/\s+/g, '_')}_${fecha}.pdf`;
+        }
+
+        /** Cierra el modal de subida y lo deja como recién abierto. */
+        function cerrarYLimpiarModalSubida() {
+            cerrarModal();
+            $('formSubir').reset(); // inputs y selects
+            seleccion = null;       // archivo o carpeta elegidos en el dropzone
+            progreso(null);
+            textoDrop();            // texto inicial del dropzone
+        }
+
+        inputCamara.addEventListener('change', async () => {
+            const foto = inputCamara.files[0];
+            if (!foto) return;
+
+            // 1. El área es obligatoria
+            const departamento = selectDepartamento.value.trim();
+            if (!departamento) {
+                alert('Selecciona el área (departamento) antes de tomar la foto.');
+                inputCamara.value = '';
+                return;
+            }
+
+            // 2. Nombre del documento (antes de convertir)
+            const nombrePdf = pedirNombrePdf(departamento);
+
+            inputCamara.disabled = true; // evita otra foto mientras se procesa esta
+            let exito = false;
+            try {
+                // 3. Foto → PDF en memoria
+                textoDropzone.innerHTML = `⏳ Convirtiendo a PDF...<br><b>${esc(nombrePdf)}</b>`;
+                const pdf = await fotoAPdf(foto, nombrePdf);
+
+                // 4. Datos a enviar
+                const formData = new FormData();
+                formData.append('file', pdf);
+                formData.append('departamento', departamento);
+                if (estado.area !== 'Todos' && estado.carpeta !== null) {
+                    formData.append('carpetaId', String(estado.carpeta)); // carpeta abierta
+                }
+
+                // 5. Subida a la ruta relativa (mismo servidor que sirve el panel)
+                textoDropzone.innerHTML = `⏳ Subiendo PDF...<br><b>${esc(pdf.name)}</b>`;
+                const response = await fetch('/documents/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    exito = true;
+                    textoDropzone.innerHTML = `✅ ¡PDF subido con éxito!<br><b>${esc(pdf.name)}</b>`;
+                    // 6. A los 2 s: cerrar el modal, limpiarlo y refrescar la tabla de fondo
+                    setTimeout(() => {
+                        cerrarYLimpiarModalSubida();
+                        inputCamara.disabled = false;
+                        cargar();
+                    }, 2000);
+                } else {
+                    const error = await response.json().catch(() => ({}));
+                    const mensaje = Array.isArray(error.message)
+                        ? error.message.join(', ')
+                        : (error.message || `Error ${response.status}`);
+                    textoDropzone.innerHTML = `❌ Error al subir: ${esc(mensaje)}`;
+                }
+            } catch (error) {
+                console.error('Error al procesar la foto:', error);
+                textoDropzone.innerHTML = error instanceof TypeError
+                    ? '❌ Error de conexión con el servidor.'
+                    : `❌ ${esc(error.message)}`;
+            } finally {
+                // Limpiar el input para poder tomar otra foto. Si se subió bien, la cámara
+                // sigue bloqueada hasta que el modal se cierre (así no se cierra a media subida).
+                inputCamara.value = '';
+                if (!exito) inputCamara.disabled = false;
+            }
         });
     </script>
 </body>
