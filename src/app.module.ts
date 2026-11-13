@@ -7,7 +7,8 @@ import { AppService } from './app.service';
 import { Usuario } from './usuarios/usuario.entity';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { DocumentsModule } from './documents/documents.module';
-import { Documento } from './documents/documento.entity';
+import { FoldersModule } from './folders/folders.module';
+import { AuditModule } from './audit/audit.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -20,7 +21,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',
+        // El servidor local es MariaDB 10.4. Con type 'mysql', TypeORM interpreta mal los
+        // valores por defecto de las columnas nullable, cree que cambiaron en cada arranque y
+        // vuelve a alterarlas (borrando y recreando sus índices y claves foráneas).
+        // Si en la nube usas MySQL 8, define DB_TYPE=mysql en el .env de ese entorno.
+        type: config.get<string>('DB_TYPE') === 'mysql' ? 'mysql' : 'mariadb',
         host: config.get<string>('DB_HOST'),
         port: config.get<number>('DB_PORT'),
         username: config.get<string>('DB_USER'),
@@ -68,21 +73,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'public'),
     }),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: '127.0.0.1',
-      port: 3307,
-      username: 'root',
-      password: '',
-      database: 'activauniformes',
-      entities: [Usuario, Documento],
-      synchronize: true,
-      logging: false,
-    }),
+    // Se eliminó un segundo TypeOrmModule.forRoot fijo a 127.0.0.1:3307: apuntaba a la misma
+    // base de datos que la conexión de arriba y las dos ejecutaban `synchronize` a la vez,
+    // de modo que una intentaba borrar índices que la otra ya había borrado.
 
     TypeOrmModule.forFeature([Usuario]),
     UsuariosModule,
     DocumentsModule,
+    FoldersModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],
