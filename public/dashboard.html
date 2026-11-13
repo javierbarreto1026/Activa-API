@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0d0d0d">
     <title>Documentos | Activa Uniformes</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,7 +29,7 @@
     <header>
         <nav class="navbar" aria-label="Principal">
             <a class="brand" href="dashboard.html" aria-label="Activa Uniformes, inicio">
-                <img class="brand-mark" src="favicon.svg" alt="" width="38" height="38">
+                <img class="brand-mark" src="favicon.png" alt="" width="38" height="38">
                 <span class="brand-text"><strong>ACTIVA</strong><span>UNIFORMES</span></span>
             </a>
 
@@ -1723,9 +1724,10 @@
             // Diálogo de subida
             $('btnCerrarModal').addEventListener('click', cerrarModal);
             $('btnCancelarSubida').addEventListener('click', cerrarModal);
-            modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
-            modal.addEventListener('cancel', (e) => { if (subiendo) e.preventDefault(); }); // Escape durante una carga
-            $('modalAdmin').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarModalAdmin(); });
+            // Modal estático: el clic en el fondo no lo cierra; Escape tampoco (solo X o Cancelar)
+            modal.addEventListener('cancel', (e) => e.preventDefault());
+            // Modal estático: ni el clic en el fondo ni Escape cierran "Nuevo usuario"; solo la X o Cancelar
+            $('modalAdmin').addEventListener('cancel', (e) => e.preventDefault());
             $('formSubir').addEventListener('submit', subir);
             $('selectArea').addEventListener('change', pintarDestino);
             inputArchivo.addEventListener('change', () => seleccionarArchivo(inputArchivo.files[0] || null));
@@ -1753,9 +1755,10 @@
             // Diálogo de auditoría
             const dlgAuditoria = $('modalAuditoria');
             dlgAuditoria.addEventListener('click', (e) => {
-                if (e.target === dlgAuditoria || e.target.closest('[data-cerrar-auditoria]')) { dlgAuditoria.close(); return; }
+                if (e.target.closest('[data-cerrar-auditoria]')) { dlgAuditoria.close(); return; }
                 if (e.target.closest('#btnAuditReintentar')) cargarAuditoria();
             });
+            dlgAuditoria.addEventListener('cancel', (e) => e.preventDefault()); // sin cierre con Escape
             $('auditArea').addEventListener('change', (e) => { auditoria.area = e.target.value; auditoria.pagina = 1; cargarAuditoria(); });
             $('auditAccion').addEventListener('change', (e) => { auditoria.accion = e.target.value; auditoria.pagina = 1; cargarAuditoria(); });
             $('btnAuditRecargar').addEventListener('click', cargarAuditoria);
@@ -1766,11 +1769,12 @@
             $('btnGestionAdmin').addEventListener('click', abrirGestionUsuarios);
             const dlgUsuarios = $('modalUsuarios');
             dlgUsuarios.addEventListener('click', (e) => {
-                if (e.target === dlgUsuarios || e.target.closest('[data-cerrar-usuarios]')) { dlgUsuarios.close(); return; }
+                if (e.target.closest('[data-cerrar-usuarios]')) { dlgUsuarios.close(); return; }
                 const btnEditar = e.target.closest('[data-editar-usuario]');
                 if (btnEditar) { abrirEditarUsuario(+btnEditar.dataset.editarUsuario); return; }
                 if (e.target.closest('#btnUsuariosReintentar')) cargarUsuarios();
             });
+            dlgUsuarios.addEventListener('cancel', (e) => e.preventDefault()); // sin cierre con Escape
             $('btnUsuariosRecargar').addEventListener('click', cargarUsuarios);
             $('btnNuevoUsuario').addEventListener('click', abrirModalAdmin);
             let debounceUsuarios;
@@ -1781,9 +1785,11 @@
 
             const dlgEditar = $('modalEditarUsuario');
             $('formEditarUsuario').addEventListener('submit', guardarUsuario);
+            // Modal estático: solo la X o Cancelar ([data-cerrar-editar]) lo cierran; el fondo y Escape no
             dlgEditar.addEventListener('click', (e) => {
-                if (e.target === dlgEditar || e.target.closest('[data-cerrar-editar]')) cerrarEditarUsuario();
+                if (e.target.closest('[data-cerrar-editar]')) cerrarEditarUsuario();
             });
+            dlgEditar.addEventListener('cancel', (e) => e.preventDefault());
             dlgEditar.addEventListener('close', () => { gestion.editando = null; });
         }
 
