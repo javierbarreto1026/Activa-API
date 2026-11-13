@@ -4,6 +4,9 @@ import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './create-usuario.dto';
 import { LoginUsuarioDto } from './login-usuario.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { ROLES_ADMIN } from '../auth/usuario-sesion';
 
 interface AuthenticatedRequest extends ExpressRequest {
   user: {
@@ -31,6 +34,10 @@ export class UsuariosController {
     };
   }
 
+  // Solo administradores: sin esta protección cualquiera podía crearse una cuenta
+  // de Administrador y saltarse el control de acceso de /users, /logs, etc.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ROLES_ADMIN)
   @Post('crear')
   async crearUsuario(
     @Body()
@@ -64,13 +71,16 @@ export class UsuariosController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
+  // La lista de usuarios es solo para administradores (el panel usa GET /users).
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ROLES_ADMIN)
   @Get()
   findAll() {
     return this.usuariosService.findAll();
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ROLES_ADMIN)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usuariosService.findOne(Number(id));

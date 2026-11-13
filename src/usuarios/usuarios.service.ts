@@ -7,12 +7,24 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Usuario } from './usuario.entity';
+import { COLUMNAS_PUBLICAS_USUARIO, Usuario } from './usuario.entity';
 import { CreateUsuarioDto } from './create-usuario.dto';
 import { LoginUsuarioDto } from './login-usuario.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
+import {
+  canonizarDepartamento,
+  MENSAJE_DEPARTAMENTO_INVALIDO,
+  type Departamento,
+} from '../common/departamentos';
+
+/** Solo se crean cuentas en las áreas oficiales (se guarda el nombre exacto: "SST", no "sst"). */
+function validarDepartamento(valor: string | undefined): Departamento {
+  const departamento = canonizarDepartamento(valor);
+  if (!departamento) throw new BadRequestException(MENSAJE_DEPARTAMENTO_INVALIDO);
+  return departamento;
+}
 
 @Injectable()
 export class UsuariosService {
@@ -41,6 +53,8 @@ export class UsuariosService {
       throw new BadRequestException('Este correo ya está registrado en el sistema.');
     }
 
+    const departamento = validarDepartamento(datos.departamento);
+
     const salt = await bcrypt.genSalt(10);
     const contrasenaHasheada = await bcrypt.hash(datos.contrasena, salt);
 
@@ -48,7 +62,7 @@ export class UsuariosService {
       nombre: datos.nombre,
       correo: datos.correo,
       contrasena: contrasenaHasheada,
-      departamento: datos.departamento,
+      departamento,
       rol: datos.rol || 'Administrador',
     });
 
@@ -57,13 +71,14 @@ export class UsuariosService {
   }
 
   async crearUsuario(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
-    const { correo, contrasena, nombre, departamento } = createUsuarioDto;
+    const { correo, contrasena, nombre } = createUsuarioDto;
 
     // 1. Validar complejidad de contraseña
     const validacion = validarComplejidadContrasena(contrasena);
     if (!validacion.valida) {
       throw new BadRequestException(validacion.mensaje);
     }
+    const departamento = validarDepartamento(createUsuarioDto.departamento);
 
     const usuarioExistente = await this.usuarioRepository.findOne({ where: { correo } });
     if (usuarioExistente) {
@@ -109,12 +124,16 @@ export class UsuariosService {
     };
   }
 
+  // Nunca se devuelven la contraseña (hash) ni el código de recuperación.
   async findAll() {
-    return await this.usuarioRepository.find();
+    return await this.usuarioRepository.find({ select: COLUMNAS_PUBLICAS_USUARIO });
   }
 
   async findOne(id: number) {
-    const usuario = await this.usuarioRepository.findOne({ where: { id } });
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id },
+      select: COLUMNAS_PUBLICAS_USUARIO,
+    });
     if (!usuario) {
       throw new NotFoundException(`El usuario con ID ${id} no fue encontrado`);
     }

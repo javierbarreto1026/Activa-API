@@ -29,3 +29,16 @@ export class Usuario {
   @CreateDateColumn()
   fecha_creacion!: Date;
 }
+
+/**
+ * Columnas que se pueden devolver por la API (`select` de TypeORM).
+ * Excluye la contraseña (hash) y el código de recuperación.
+ */
+export const COLUMNAS_PUBLICAS_USUARIO = {
+  id: true,
+  nombre: true,
+  correo: true,
+  rol: true,
+  departamento: true,
+  fecha_creacion: true,
+} as const;
