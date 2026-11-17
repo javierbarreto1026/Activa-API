@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { FindOperator, In, Repository } from 'typeorm';
@@ -43,6 +44,9 @@ describe('FoldersService', () => {
   let service: FoldersService;
 
   beforeEach(() => {
+    // Silencia los logs de error esperados (p. ej. "R2 caído") sin tocar el Logger real.
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+
     carpetas = [
       { id: 10, nombre: 'Fichas', departamento: 'SST', padreId: null, usuarioId: 2 },
       { id: 11, nombre: '2026', departamento: 'SST', padreId: 10, usuarioId: 2 },
