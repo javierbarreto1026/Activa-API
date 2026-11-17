@@ -1,4 +1,14 @@
-import { Controller, Post, Body, Get, UseGuards, Request, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Delete,
+  UseGuards,
+  Request,
+  Param,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './create-usuario.dto';
@@ -6,7 +16,8 @@ import { LoginUsuarioDto } from './login-usuario.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { ROLES_ADMIN } from '../auth/usuario-sesion';
+import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
+import { ROLES_ADMIN, type UsuarioSesion } from '../auth/usuario-sesion';
 
 interface AuthenticatedRequest extends ExpressRequest {
   user: {
@@ -85,6 +96,16 @@ export class UsuariosController {
   findOne(@Param('id') id: string) {
     return this.usuariosService.findOne(Number(id));
   }
+
+  // DELETE /usuarios/5 → baja del empleado (borrado lógico, ver UsuariosService.eliminarUsuario).
+  // El id del administrador se toma de la sesión, no del cuerpo de la petición.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ROLES_ADMIN)
+  @Delete(':id')
+  eliminar(@Param('id', ParseIntPipe) id: number, @UsuarioActual() admin: UsuarioSesion) {
+    return this.usuariosService.eliminarUsuario(id, admin.id);
+  }
+
   @Post('solicitar-codigo')
   async solicitarCodigo(@Body('correo') correo: string) {
     return await this.usuariosService.solicitarCodigoRecuperacion(correo);

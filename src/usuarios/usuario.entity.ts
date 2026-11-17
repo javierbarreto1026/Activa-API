@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  DeleteDateColumn,
+} from 'typeorm';
 
 @Entity('usuarios')
 export class Usuario {
@@ -28,6 +34,16 @@ export class Usuario {
 
   @CreateDateColumn()
   fecha_creacion!: Date;
+
+  /**
+   * Borrado lógico (baja por despido o fin de contrato). Con valor, TypeORM excluye
+   * la fila de toda consulta: el login y JwtStrategy dejan de encontrarla y el acceso
+   * se pierde de inmediato. La fila se conserva para que documentos, carpetas y
+   * auditoría sigan apuntando a ella. Para mostrar el nombre del autor en esos
+   * listados, las consultas usan `withDeleted()` (antes del `leftJoin`, o no surte efecto).
+   */
+  @DeleteDateColumn()
+  fecha_eliminacion?: Date | null;
 }
 
 /**

@@ -7,6 +7,7 @@ import { UsuariosService } from './usuarios.service';
 import { Usuario } from './usuario.entity';
 import { JwtStrategy } from './jwt.strategy';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 import { AuditModule } from '../audit/audit.module';
 import { UsersController } from './users.controller';
 import { GestionUsuariosService } from './gestion-usuarios.service';
@@ -17,9 +18,13 @@ import { GestionUsuariosService } from './gestion-usuarios.service';
     MailerModule,
     AuditModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: 'MI_CLAVE_SECRETA_SENA',
-      signOptions: { expiresIn: '1h' },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        // getOrThrow: si falta JWT_SECRET la app no arranca, en vez de firmar tokens sin clave.
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
     }),
   ],
   controllers: [UsuariosController, UsersController],

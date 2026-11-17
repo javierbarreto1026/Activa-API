@@ -13,6 +13,7 @@ import { LoginUsuarioDto } from './login-usuario.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
+import { AuditService } from '../audit/audit.service';
 import {
   canonizarDepartamento,
   MENSAJE_DEPARTAMENTO_INVALIDO,
@@ -34,6 +35,7 @@ export class UsuariosService {
     private readonly configService: ConfigService,
     private jwtService: JwtService,
     private readonly mailerService: MailerService,
+    private readonly auditService: AuditService,
   ) {}
 
   async crearUsuarioPorAdmin(datos: {
@@ -48,9 +50,18 @@ export class UsuariosService {
       throw new BadRequestException(validacion.mensaje);
     }
 
-    const existe = await this.usuarioRepository.findOne({ where: { correo: datos.correo } });
+    // withDeleted: el correo de una cuenta eliminada sigue ocupando el índice único;
+    // sin esto el INSERT fallaría con un 500 en vez de un mensaje claro.
+    const existe = await this.usuarioRepository.findOne({
+      where: { correo: datos.correo },
+      withDeleted: true,
+    });
     if (existe) {
-      throw new BadRequestException('Este correo ya está registrado en el sistema.');
+      throw new BadRequestException(
+        existe.fecha_eliminacion
+          ? 'Este correo pertenece a una cuenta eliminada. Usa un correo diferente.'
+          : 'Este correo ya está registrado en el sistema.',
+      );
     }
 
     const departamento = validarDepartamento(datos.departamento);
@@ -80,7 +91,11 @@ export class UsuariosService {
     }
     const departamento = validarDepartamento(createUsuarioDto.departamento);
 
-    const usuarioExistente = await this.usuarioRepository.findOne({ where: { correo } });
+    // Incluye cuentas eliminadas: su correo sigue ocupando el índice único.
+    const usuarioExistente = await this.usuarioRepository.findOne({
+      where: { correo },
+      withDeleted: true,
+    });
     if (usuarioExistente) {
       throw new BadRequestException('El correo ya está registrado en el sistema');
     }
@@ -138,6 +153,42 @@ export class UsuariosService {
       throw new NotFoundException(`El usuario con ID ${id} no fue encontrado`);
     }
     return usuario;
+  }
+
+  /**
+   * Baja de un usuario (despido o fin de contrato) con borrado lógico.
+   *
+   * La fila no se borra: sus documentos, carpetas y registros de auditoría siguen
+   * apuntando a ella. Pero TypeORM la excluye de toda consulta, así que el login la
+   * rechaza y JwtStrategy responde 401 en la siguiente petición: el acceso se pierde
+   * de inmediato, aunque el usuario tenga un token todavía vigente.
+   *
+   * `adminId` sale del token (nunca del cliente) para impedir que el administrador se
+   * elimine a sí mismo y deje el sistema sin quien lo gestione.
+   */
+  async eliminarUsuario(id: number, adminId: number) {
+    if (id === adminId) {
+      throw new BadRequestException('No puedes eliminar tu propia cuenta.');
+    }
+
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id },
+      select: { id: true, nombre: true, correo: true, departamento: true },
+    });
+    if (!usuario) {
+      throw new NotFoundException(`El usuario con ID ${id} no existe.`);
+    }
+
+    await this.usuarioRepository.softDelete({ id });
+
+    await this.auditService.registrar({
+      usuarioId: adminId,
+      accion: 'DELETE_USER',
+      departamento: usuario.departamento,
+      detalles: `${usuario.nombre} (#${usuario.id}, ${usuario.correo}): cuenta eliminada y acceso revocado`,
+    });
+
+    return { message: `${usuario.nombre} fue eliminado y ya no tiene acceso al sistema.` };
   }
 
   async solicitarCodigoRecuperacion(correo: string) {
