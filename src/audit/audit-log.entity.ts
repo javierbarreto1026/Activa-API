@@ -15,6 +15,7 @@ export const ACCIONES_AUDITORIA = [
   'CREATE_FOLDER',
   'RENAME_FOLDER',
   'UPDATE_USER',
+  'DELETE_USER',
 ] as const;
 
 export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];

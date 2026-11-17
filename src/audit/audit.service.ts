@@ -59,6 +59,9 @@ export class AuditService {
 
     const qb = this.auditRepository
       .createQueryBuilder('log')
+      // Incluye usuarios eliminados (borrado lógico): el historial conserva su nombre.
+      // Debe ir ANTES del join: TypeORM añade "fecha_eliminacion IS NULL" al crearlo.
+      .withDeleted()
       // Solo nombre y correo del usuario (nunca su contraseña).
       .leftJoin('log.user', 'usuario')
       .addSelect(['usuario.id', 'usuario.nombre', 'usuario.correo']);
