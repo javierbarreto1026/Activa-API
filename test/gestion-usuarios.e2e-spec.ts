@@ -39,6 +39,7 @@ describe('Gestión de usuarios (HTTP)', () => {
     findAll: jest.fn(() => Promise.resolve([])),
     findOne: jest.fn(() => Promise.resolve({})),
     crearUsuarioPorAdmin: jest.fn(() => Promise.resolve({})),
+    eliminarUsuario: jest.fn(() => Promise.resolve({ message: 'ok' })),
   };
 
   beforeAll(async () => {
@@ -132,5 +133,25 @@ describe('Gestión de usuarios (HTTP)', () => {
     expect(usuariosService.crearUsuarioPorAdmin).not.toHaveBeenCalled();
 
     await http().get('/usuarios').set('x-test-user', ADMIN).expect(200);
+  });
+
+  it('DELETE /usuarios/:id: solo administradores', async () => {
+    await http().delete('/usuarios/5').expect(403);
+    await http().delete('/usuarios/5').set('x-test-user', ANA).expect(403);
+    expect(usuariosService.eliminarUsuario).not.toHaveBeenCalled();
+  });
+
+  it('DELETE /usuarios/:id pasa el id del administrador de la sesión, no del cliente', async () => {
+    await http()
+      .delete('/usuarios/5')
+      .set('x-test-user', ADMIN)
+      .send({ adminId: 5 })
+      .expect(200, { message: 'ok' });
+    expect(usuariosService.eliminarUsuario).toHaveBeenCalledWith(5, 1);
+  });
+
+  it('DELETE /usuarios/:id exige un id numérico', async () => {
+    await http().delete('/usuarios/abc').set('x-test-user', ADMIN).expect(400);
+    expect(usuariosService.eliminarUsuario).not.toHaveBeenCalled();
   });
 });

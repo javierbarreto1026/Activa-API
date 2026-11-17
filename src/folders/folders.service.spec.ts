@@ -194,6 +194,7 @@ describe('FoldersService', () => {
     const qb = {
       leftJoin: jest.fn().mockReturnThis(),
       addSelect: jest.fn().mockReturnThis(),
+      withDeleted: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       addOrderBy: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),

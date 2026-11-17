@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CanActivate, ExecutionContext, INestApplication, Injectable } from '@nestjs/common';
 import request from 'supertest';
 import { jest } from '@jest/globals';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityTarget, type ObjectLiteral, type Repository } from 'typeorm';
 import { of } from 'rxjs';
 import { JwtAuthGuard } from './../src/usuarios/jwt-auth.guard';
 import { DocumentsController } from './../src/documents/documents.controller';
@@ -242,5 +242,61 @@ describe('Entidades TypeORM', () => {
     );
     // Sin clave foránea hacia usuarios: el historial sobrevive al borrado de usuarios.
     expect(log.foreignKeys).toHaveLength(0);
+
+    // Usuarios se dan de baja con borrado lógico: la fila (y sus referencias) se conserva.
+    const usuario = ds.getMetadata(Usuario);
+    expect(usuario.deleteDateColumn?.propertyName).toBe('fecha_eliminacion');
+    expect(usuario.deleteDateColumn?.isNullable).toBe(true);
+  });
+
+  it('los listados conservan el nombre de usuarios eliminados (withDeleted antes del JOIN)', async () => {
+    const ds = new DataSource({
+      type: 'mysql',
+      database: 'solo_metadatos', // nunca se conecta
+      entities: [Usuario, Documento, Carpeta, AuditLog],
+    });
+    await (ds as unknown as { buildMetadatas: () => Promise<void> }).buildMetadatas();
+
+    // QueryBuilder real (genera el SQL de verdad) que entrega la consulta en vez de ejecutarla.
+    const consultas: string[] = [];
+    const repo = <T extends ObjectLiteral>(entidad: EntityTarget<T>) => ({
+      createQueryBuilder: (alias: string) => {
+        const qb = ds.getRepository(entidad).createQueryBuilder(alias);
+        const capturar = <R>(vacio: R) => {
+          consultas.push(qb.getQuery());
+          return Promise.resolve(vacio);
+        };
+        return Object.assign(qb, {
+          getMany: () => capturar([]),
+          getManyAndCount: () => capturar([[], 0]),
+        });
+      },
+    });
+    const admin = { id: 1, nombre: 'Admin', correo: '', rol: 'admin', departamento: 'Gerencia' };
+    const nada = {} as never;
+
+    await new AuditService(repo(AuditLog) as unknown as Repository<AuditLog>).listar();
+    await new FoldersService(
+      repo(Carpeta) as unknown as Repository<Carpeta>,
+      nada,
+      nada,
+      nada,
+    ).listar(admin);
+    const documentos = new DocumentsService(
+      repo(Documento) as unknown as Repository<Documento>,
+      nada,
+      nada,
+      nada,
+    );
+    await documentos.findAll(admin);
+    await documentos.findAllPaginado(admin);
+
+    // Sin "fecha_eliminacion IS NULL" en el JOIN: si un autor fue eliminado, el registro
+    // sigue mostrando su nombre en vez de "Usuario #id".
+    expect(consultas).toHaveLength(4);
+    for (const sql of consultas) {
+      expect(sql).toContain('LEFT JOIN `usuarios` `usuario`');
+      expect(sql).not.toContain('`fecha_eliminacion` IS NULL');
+    }
   });
 });
