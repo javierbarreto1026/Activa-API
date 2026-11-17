@@ -50,6 +50,7 @@ describe('Carpetas, carga masiva y auditoría (HTTP)', () => {
     crear: jest.fn(() => Promise.resolve({ id: 5 })),
     renombrar: jest.fn(() => Promise.resolve({ id: 5 })),
     listar: jest.fn(() => Promise.resolve([])),
+    eliminarCarpeta: jest.fn(() => Promise.resolve({ mensaje: 'ok' })),
   };
   const auditService = { listar: jest.fn(() => Promise.resolve({ data: [] })) };
 
@@ -131,6 +132,26 @@ describe('Carpetas, carga masiva y auditoría (HTTP)', () => {
       { nombre: 'Nuevo' },
       expect.objectContaining({ id: 2 }),
     );
+  });
+
+  it('DELETE /folders/:id es solo para administradores y exige id numérico', async () => {
+    await request(app.getHttpServer()).delete('/folders/5').expect(403); // sin sesión
+    await request(app.getHttpServer()).delete('/folders/5').set('x-test-user', ANA).expect(403);
+    expect(foldersService.eliminarCarpeta).not.toHaveBeenCalled();
+
+    await request(app.getHttpServer()).delete('/folders/abc').set('x-test-user', ADMIN).expect(400);
+    await request(app.getHttpServer()).delete('/folders/5').set('x-test-user', ADMIN).expect(200);
+    expect(foldersService.eliminarCarpeta).toHaveBeenCalledWith(
+      5,
+      expect.objectContaining({ id: 1, rol: 'Administrador' }),
+    );
+  });
+
+  it('GET /logs acepta filtrar por DELETE_FOLDER', async () => {
+    await request(app.getHttpServer())
+      .get('/logs?accion=DELETE_FOLDER')
+      .set('x-test-user', ADMIN)
+      .expect(200);
   });
 
   it('POST /documents/upload-carpeta recibe varios archivos, rutas y carpetaId', async () => {

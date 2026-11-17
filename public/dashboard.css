@@ -501,6 +501,20 @@ button.crumb:hover { background: var(--surface-alt); color: var(--text); }
 }
 .folder-edit:hover { border-color: var(--line-strong); background: var(--surface-alt); color: var(--ink); }
 
+/* Eliminar carpeta (solo administradores): papelera junto a "Renombrar".
+   Discreta en reposo; el fondo rosado en :hover anticipa que la acción es destructiva. */
+.btn-eliminar-carpeta {
+    flex-shrink: 0; width: 32px; height: 32px; margin-right: .5rem; padding: 0;
+    display: grid; place-items: center;
+    background: transparent; color: #c8102e;
+    border: 1px solid transparent; border-radius: 7px; cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.folder-edit + .btn-eliminar-carpeta { margin-left: -.3rem; } /* pegada a "Renombrar" */
+.btn-eliminar-carpeta:hover { background: #ffe8eb; border-color: #f5c6ce; color: var(--red-dark); }
+.btn-eliminar-carpeta:disabled { opacity: .5; cursor: progress; background: transparent; border-color: transparent; }
+.btn-eliminar-carpeta svg { stroke: currentColor; fill: none; }
+
 /* Ubicación de un archivo que está en otra carpeta (búsquedas, pestaña "Todos") */
 .file-text { display: flex; flex-direction: column; min-width: 0; }
 .file-path {
@@ -565,6 +579,7 @@ dialog.dialog-lg { width: min(1040px, calc(100% - 2rem)); }
 .badge.b-UPLOAD_DOCUMENT { background: #e6f2ec; color: var(--ok); }
 .badge.b-CREATE_FOLDER { background: #e8eef8; color: var(--blue); }
 .badge.b-RENAME_FOLDER { background: #fdf0e6; color: #a34a12; }
+.badge.b-DELETE_FOLDER { background: var(--red-tint); color: var(--red-dark); }
 .badge.b-DELETE_DOCUMENT { background: var(--red-tint); color: var(--red-dark); }
 .badge.b-UPDATE_USER { background: #efe9f7; color: #5b3f8c; }
 .badge.b-DELETE_USER { background: var(--red-tint); color: var(--red-dark); }

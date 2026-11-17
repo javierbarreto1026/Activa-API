@@ -21,8 +21,12 @@ const usuario = (id: number, rol: string, departamento: string): UsuarioSesion =
   rol,
   departamento,
 });
+const admin = usuario(1, 'Administrador', 'Gerencia');
 const ana = usuario(2, 'usuario', 'SST');
 const rrhh = usuario(3, 'usuario', 'Recursos Humanos');
+
+/** Ids del criterio `{ id: In([...]) }` con que se llamó a `em.delete`. */
+const idsBorrados = (criterio: unknown) => (criterio as { id: FindOperator<number[]> }).id.value;
 
 const R2 = 'https://cuenta.r2.cloudflarestorage.com/bucket/';
 const ANTES_1 = 'documentos/sst/fichas/chaqueta-aaaa1111.jpg';
@@ -33,11 +37,15 @@ const DESPUES_2 = 'documentos/sst/fichas-tecnicas/2026/manual-bbbb2222.pdf';
 describe('FoldersService', () => {
   let carpetas: Carpeta[];
   let documentos: Documento[];
-  let em: { update: jest.Mock<(...args: unknown[]) => Promise<void>> };
+  let em: {
+    update: jest.Mock<(...args: unknown[]) => Promise<void>>;
+    delete: jest.Mock<(...args: unknown[]) => Promise<void>>;
+  };
   let almacenamiento: {
     usaR2: boolean;
     copiarEnR2: jest.Mock<(origen: string, destino: string) => Promise<void>>;
     eliminarClavesR2: jest.Mock<(claves: readonly string[]) => Promise<void>>;
+    eliminar: jest.Mock<(archivo: Documento) => Promise<void>>;
     urlR2: jest.Mock<(clave: string) => string>;
   };
   let auditoria: { registrar: jest.Mock<(...args: unknown[]) => Promise<void>> };
@@ -64,6 +72,25 @@ describe('FoldersService', () => {
         if (entidad === Carpeta) {
           const c = carpetas.find((x) => x.id === (criterio as { id: number }).id)!;
           Object.assign(c, cambios);
+        }
+        return Promise.resolve();
+      }),
+      delete: jest.fn((entidad: unknown, criterio: unknown) => {
+        const ids = new Set(idsBorrados(criterio));
+        if (entidad === Documento) {
+          documentos = documentos.filter((d) => !ids.has(d.id));
+        } else if (entidad === Carpeta) {
+          // Como las claves foráneas de MySQL (comprobadas fila a fila): no se puede borrar
+          // una carpeta que aún tiene documentos o subcarpetas, ni madre e hija a la vez.
+          const referenciada =
+            documentos.some((d) => ids.has(d.carpetaId!)) ||
+            carpetas.some((c) => c.padreId !== null && ids.has(c.padreId));
+          if (referenciada) {
+            return Promise.reject(
+              new Error('ER_ROW_IS_REFERENCED_2: a foreign key constraint fails'),
+            );
+          }
+          carpetas = carpetas.filter((c) => !ids.has(c.id));
         }
         return Promise.resolve();
       }),
@@ -101,6 +128,7 @@ describe('FoldersService', () => {
       usaR2: true,
       copiarEnR2: jest.fn(() => Promise.resolve()),
       eliminarClavesR2: jest.fn(() => Promise.resolve()),
+      eliminar: jest.fn(() => Promise.resolve()),
       urlR2: jest.fn((clave: string) => R2 + clave),
     };
     auditoria = { registrar: jest.fn(() => Promise.resolve()) };
@@ -168,6 +196,95 @@ describe('FoldersService', () => {
     it('un usuario de otra área recibe 404 y no se mueve nada', async () => {
       await expect(service.renombrar(10, { nombre: 'X' }, rrhh)).rejects.toThrow(NotFoundException);
       expect(almacenamiento.copiarEnR2).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('eliminarCarpeta', () => {
+    it('borra documentos y subcarpetas en la BD (de abajo arriba) y después sus archivos', async () => {
+      const resultado = await service.eliminarCarpeta(10, admin);
+
+      expect(resultado).toEqual({
+        mensaje: 'Carpeta "Fichas" eliminada correctamente',
+        carpetasEliminadas: 2,
+        documentosEliminados: 3,
+      });
+      // Solo sobrevive la carpeta hermana; ningún documento del subárbol.
+      expect(carpetas.map((c) => c.id)).toEqual([12]);
+      expect(documentos).toEqual([]);
+      // Documentos → subcarpeta "2026" → "Fichas" (el mock rechaza cualquier otro orden).
+      expect(
+        em.delete.mock.calls.map(([entidad, criterio]) => [entidad, idsBorrados(criterio)]),
+      ).toEqual([
+        [Documento, [1, 2, 3]],
+        [Carpeta, [11]],
+        [Carpeta, [10]],
+      ]);
+      // Archivos de R2 y del respaldo local, solo después de confirmar la transacción.
+      expect(almacenamiento.eliminar.mock.calls.map(([doc]) => doc.nombreGuardado)).toEqual([
+        ANTES_1,
+        ANTES_2,
+        'local.pdf',
+      ]);
+      expect(Math.max(...em.delete.mock.invocationCallOrder)).toBeLessThan(
+        Math.min(...almacenamiento.eliminar.mock.invocationCallOrder),
+      );
+      expect(auditoria.registrar).toHaveBeenCalledWith({
+        usuarioId: 1,
+        accion: 'DELETE_FOLDER',
+        departamento: 'SST',
+        detalles: 'Eliminó la carpeta "Fichas" (id 10) con 1 subcarpeta(s) y 3 archivo(s)',
+      });
+    });
+
+    it('al eliminar una subcarpeta conserva la carpeta madre y sus archivos', async () => {
+      await service.eliminarCarpeta(11, admin);
+
+      expect(carpetas.map((c) => c.id)).toEqual([10, 12]);
+      expect(documentos.map((d) => d.id)).toEqual([1]);
+      expect(almacenamiento.eliminar).toHaveBeenCalledTimes(2);
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          detalles: 'Eliminó la carpeta "Fichas / 2026" (id 11) con 2 archivo(s)',
+        }),
+      );
+    });
+
+    it('una carpeta vacía solo borra su registro', async () => {
+      const resultado = await service.eliminarCarpeta(12, admin);
+
+      expect(resultado).toMatchObject({ carpetasEliminadas: 1, documentosEliminados: 0 });
+      expect(em.delete).toHaveBeenCalledTimes(1);
+      expect(almacenamiento.eliminar).not.toHaveBeenCalled();
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ detalles: 'Eliminó la carpeta "Otra" (id 12)' }),
+      );
+    });
+
+    it('si la transacción falla, no borra ningún archivo ni registra auditoría', async () => {
+      em.delete.mockImplementation(() => Promise.reject(new Error('BD caída')));
+
+      await expect(service.eliminarCarpeta(10, admin)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(almacenamiento.eliminar).not.toHaveBeenCalled();
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+    });
+
+    it('si hay archivos en R2 pero R2 no está configurado, no toca nada', async () => {
+      almacenamiento.usaR2 = false;
+
+      await expect(service.eliminarCarpeta(10, admin)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(em.delete).not.toHaveBeenCalled();
+      expect(almacenamiento.eliminar).not.toHaveBeenCalled();
+    });
+
+    it('responde 404 si la carpeta no existe o es de otra área, sin borrar nada', async () => {
+      await expect(service.eliminarCarpeta(999, admin)).rejects.toThrow(NotFoundException);
+      await expect(service.eliminarCarpeta(10, rrhh)).rejects.toThrow(NotFoundException);
+      expect(em.delete).not.toHaveBeenCalled();
+      expect(almacenamiento.eliminar).not.toHaveBeenCalled();
     });
   });
 

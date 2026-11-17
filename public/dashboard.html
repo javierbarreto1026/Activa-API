@@ -463,6 +463,7 @@
             DELETE_DOCUMENT: 'Eliminó documento',
             CREATE_FOLDER: 'Creó carpeta',
             RENAME_FOLDER: 'Renombró carpeta',
+            DELETE_FOLDER: 'Eliminó carpeta',
             UPDATE_USER: 'Editó usuario',
             DELETE_USER: 'Eliminó usuario',
         };
@@ -850,11 +851,16 @@
                 : `<li><button type="button" class="crumb" data-ir-carpeta="${c.id}" title="${esc(c.nombre)}">${esc(c.nombre)}</button></li>`).join('');
 
             const visibles = estado.cargando || estado.error ? [] : carpetasVisibles();
+            // Eliminar una carpeta borra también sus archivos: como "Eliminar" en la tabla, solo administradores
+            const admin = esAdmin();
             contenedor.hidden = !visibles.length;
             contenedor.innerHTML = visibles.map(c => {
                 const archivos = contarArchivos(c.id);
                 const subs = subcarpetas(c.id, c.departamento).length;
                 const meta = `${archivos} archivo${archivos === 1 ? '' : 's'}` + (subs ? ` · ${subs} carpeta${subs === 1 ? '' : 's'}` : '');
+                const accionEliminar = admin
+                    ? `<button type="button" class="btn-eliminar-carpeta" data-eliminar-carpeta="${c.id}" title="Eliminar carpeta" aria-label="Eliminar ${esc(c.nombre)}">${ICO_ELIMINAR}</button>`
+                    : '';
                 return `
                 <div class="folder-card" role="listitem">
                     <button type="button" class="folder-open" data-abrir-carpeta="${c.id}" title="Abrir ${esc(c.nombre)}">
@@ -865,6 +871,7 @@
                         </span>
                     </button>
                     <button type="button" class="folder-edit" data-renombrar-carpeta="${c.id}" title="Renombrar" aria-label="Renombrar ${esc(c.nombre)}">${ICO_EDITAR}</button>
+                    ${accionEliminar}
                 </div>`;
             }).join('');
         }
@@ -1372,6 +1379,51 @@
             }
         }
 
+        /* --------------------------- Eliminar carpeta (admin) --------------------------- */
+
+        // El servidor borra la carpeta, sus subcarpetas y todos sus archivos (MySQL y Cloudflare R2)
+        async function eliminarCarpeta(id, btn) {
+            const carpeta = carpetaPorId(id);
+            if (!carpeta) return;
+
+            // Lo que se perderá, para que la confirmación sea explícita
+            const archivos = contarArchivos(carpeta.id);
+            const subs = descendientes(carpeta.id).size - 1;
+            const contenido = [
+                archivos ? `${archivos} archivo${archivos === 1 ? '' : 's'}` : '',
+                subs ? `${subs} subcarpeta${subs === 1 ? '' : 's'}` : '',
+            ].filter(Boolean).join(' y ');
+
+            const ok = await confirmar({
+                titulo: 'Eliminar carpeta',
+                mensaje: `¿Estás seguro de eliminar la carpeta "${carpeta.nombre}" y todo su contenido? Esta acción no se puede deshacer.` +
+                    (contenido ? ` Se eliminarán ${contenido}.` : ''),
+                textoOk: 'Sí, eliminar'
+            });
+            if (!ok) return;
+
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${API_CARPETAS}/${carpeta.id}`, {
+                    method: 'DELETE',
+                    headers: authHeaders(),
+                });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) {
+                    aviso(await mensajeError(res, 'No se pudo eliminar la carpeta.'));
+                    if (res.status === 404) await cargar(); // ya no existía: refresca la vista
+                    return;
+                }
+                aviso(`Carpeta «${carpeta.nombre}» eliminada correctamente.`, true);
+                await cargar(); // recarga carpetas y archivos del nivel actual
+            } catch (err) {
+                console.error('Error al eliminar la carpeta:', err);
+                aviso('No se pudo conectar con el servidor.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         /* ------------------------------ Auditoría (admin) ------------------------------ */
 
         const auditoria = { pagina: 1, area: '', accion: '' };
@@ -1747,6 +1799,14 @@
             });
 
             document.querySelector('.panel').addEventListener('click', (e) => {
+                // Antes que "abrir carpeta": el clic en la papelera nunca debe entrar en la carpeta
+                const btnEliminarCarpeta = e.target.closest('[data-eliminar-carpeta]');
+                if (btnEliminarCarpeta) {
+                    e.stopPropagation();
+                    eliminarCarpeta(+btnEliminarCarpeta.dataset.eliminarCarpeta, btnEliminarCarpeta);
+                    return;
+                }
+
                 const btnEliminar = e.target.closest('[data-eliminar]');
                 if (btnEliminar) {
                     eliminarDocumento(btnEliminar.dataset.eliminar);

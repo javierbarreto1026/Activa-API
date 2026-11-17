@@ -46,8 +46,16 @@ export interface CarpetaSerializada {
   fechaActualizacion: Date;
 }
 
-/** Copias simultáneas en R2 al renombrar. */
-const CONCURRENCIA_COPIAS = 4;
+/** Respuesta de DELETE /folders/:id. */
+export interface ResultadoEliminacion {
+  mensaje: string;
+  /** La carpeta eliminada más todas sus subcarpetas. */
+  carpetasEliminadas: number;
+  documentosEliminados: number;
+}
+
+/** Operaciones simultáneas sobre archivos (copias al renombrar, borrados al eliminar). */
+const CONCURRENCIA_ARCHIVOS = 4;
 
 function serializarCarpeta(carpeta: Carpeta, creadoPor?: string): CarpetaSerializada {
   return {
@@ -62,25 +70,38 @@ function serializarCarpeta(carpeta: Carpeta, creadoPor?: string): CarpetaSeriali
   };
 }
 
-/** Ids de la carpeta `raizId` y de todas sus subcarpetas (a cualquier profundidad). */
-function idsSubarbol(raizId: number, carpetas: readonly Carpeta[]): number[] {
+/**
+ * La carpeta `raizId` y todas sus subcarpetas, agrupadas por profundidad:
+ * [[raíz], [hijas], [nietas], ...]. Ninguna carpeta de un nivel es madre de otra
+ * del mismo nivel, así que cada nivel se puede borrar con una sola consulta.
+ */
+function nivelesSubarbol(raizId: number, carpetas: readonly Carpeta[]): number[][] {
   const hijas = new Map<number, number[]>();
   for (const c of carpetas) {
     if (c.padreId === null) continue;
     hijas.set(c.padreId, [...(hijas.get(c.padreId) ?? []), c.id]);
   }
-  const resultado = new Set<number>([raizId]);
-  const pendientes = [raizId];
-  while (pendientes.length > 0) {
-    for (const hija of hijas.get(pendientes.pop()!) ?? []) {
-      if (!resultado.has(hija)) {
-        resultado.add(hija);
-        pendientes.push(hija);
+  const vistas = new Set<number>([raizId]); // protege de ciclos en datos corruptos
+  const niveles: number[][] = [];
+  for (let nivel = [raizId]; nivel.length > 0;) {
+    niveles.push(nivel);
+    const siguiente: number[] = [];
+    for (const id of nivel) {
+      for (const hija of hijas.get(id) ?? []) {
+        if (!vistas.has(hija)) {
+          vistas.add(hija);
+          siguiente.push(hija);
+        }
       }
     }
+    nivel = siguiente;
   }
-  return [...resultado];
+  return niveles;
 }
+
+/** Ids de la carpeta `raizId` y de todas sus subcarpetas (a cualquier profundidad). */
+const idsSubarbol = (raizId: number, carpetas: readonly Carpeta[]): number[] =>
+  nivelesSubarbol(raizId, carpetas).flat();
 
 /** Nombres desde la raíz del área hasta `id` usando un mapa en memoria. */
 function nombresDesdeRaiz(id: number, porId: ReadonlyMap<number, Carpeta>): string[] {
@@ -374,7 +395,7 @@ export class FoldersService {
     // 1) Copiar a las claves nuevas.
     const copiadas: string[] = [];
     try {
-      await enParalelo(movimientos, CONCURRENCIA_COPIAS, async (m) => {
+      await enParalelo(movimientos, CONCURRENCIA_ARCHIVOS, async (m) => {
         await this.almacenamiento.copiarEnR2(m.origen, m.destino);
         copiadas.push(m.destino);
       });
@@ -411,5 +432,94 @@ export class FoldersService {
     await this.almacenamiento.eliminarClavesR2(movimientos.map((m) => m.origen));
 
     return movimientos.length;
+  }
+
+  /* ---------------------------- Eliminar ---------------------------- */
+
+  /**
+   * Elimina la carpeta junto con todas sus subcarpetas y documentos, en MySQL y en
+   * Cloudflare R2 (o en /uploads para los archivos del respaldo local):
+   *
+   *   1. Lee el subárbol y sus documentos. Si hay archivos en R2 pero R2 no está
+   *      configurado, responde error sin tocar nada: no se podrían borrar.
+   *   2. En una transacción borra los documentos y después las carpetas, de las más
+   *      profundas a la raíz (las claves foráneas impiden borrar una carpeta que aún
+   *      tiene documentos o subcarpetas). Si falla, no cambia nada.
+   *   3. Borra los archivos, que ya no referencia ningún registro.
+   *
+   * Igual que en `renombrar`, lo irreversible en R2 va DESPUÉS de confirmar la BD: si
+   * se borraran antes y la transacción fallara (p. ej. alguien subió un archivo a la
+   * carpeta en ese instante), quedarían documentos apuntando a archivos inexistentes.
+   * En este orden, el peor caso es un objeto huérfano, que queda registrado en el log.
+   */
+  async eliminarCarpeta(id: number, usuario: UsuarioSesion): Promise<ResultadoEliminacion> {
+    const carpeta = await this.obtenerAccesible(id, usuario);
+
+    // Todo el árbol del área en memoria: subcarpetas y ruta sin N consultas.
+    const delArea = await this.carpetaRepository.find({
+      where: { departamento: carpeta.departamento },
+    });
+    const porId = new Map(delArea.map((c) => [c.id, c]));
+    porId.set(carpeta.id, carpeta);
+
+    const niveles = nivelesSubarbol(carpeta.id, [...porId.values()]);
+    const afectadas = niveles.flat();
+    const documentos = await this.documentoRepository.find({
+      where: { carpetaId: In(afectadas) },
+    });
+
+    if (documentos.some(estaEnR2) && !this.almacenamiento.usaR2) {
+      throw new InternalServerErrorException(
+        'La carpeta contiene archivos en Cloudflare R2, pero R2 no está configurado en el servidor.',
+      );
+    }
+
+    const ruta = nombresDesdeRaiz(carpeta.id, porId).join(' / ');
+
+    // 2) Registros, todo o nada. Se borran por id los documentos leídos: si entretanto
+    //    llegó uno nuevo, la clave foránea hace fallar la transacción y no se pierde.
+    try {
+      await this.carpetaRepository.manager.transaction(async (em) => {
+        if (documentos.length > 0) {
+          await em.delete(Documento, { id: In(documentos.map((d) => d.id)) });
+        }
+        for (const nivel of [...niveles].reverse()) {
+          await em.delete(Carpeta, { id: In(nivel) });
+        }
+      });
+    } catch (err) {
+      this.logger.error(
+        `Error eliminando la carpeta ${carpeta.id} de la base de datos`,
+        err as Error,
+      );
+      throw new InternalServerErrorException(
+        'No se pudo eliminar la carpeta. No se realizó ningún cambio; inténtalo de nuevo.',
+      );
+    }
+
+    // 3) Archivos (R2 o /uploads). `eliminar` nunca lanza: los fallos quedan en el log.
+    await enParalelo(documentos, CONCURRENCIA_ARCHIVOS, (doc) => this.almacenamiento.eliminar(doc));
+
+    const subcarpetas = afectadas.length - 1;
+    const contenido = [
+      subcarpetas > 0 ? `${subcarpetas} subcarpeta(s)` : '',
+      documentos.length > 0 ? `${documentos.length} archivo(s)` : '',
+    ]
+      .filter(Boolean)
+      .join(' y ');
+
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'DELETE_FOLDER',
+      departamento: carpeta.departamento,
+      detalles:
+        `Eliminó la carpeta "${ruta}" (id ${carpeta.id})` + (contenido ? ` con ${contenido}` : ''),
+    });
+
+    return {
+      mensaje: `Carpeta "${carpeta.nombre}" eliminada correctamente`,
+      carpetasEliminadas: afectadas.length,
+      documentosEliminados: documentos.length,
+    };
   }
 }
