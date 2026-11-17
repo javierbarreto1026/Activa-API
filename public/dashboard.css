@@ -420,6 +420,39 @@ dialog.dialog-sm { width: min(400px, calc(100% - 2rem)); }
     padding: .45rem .8rem; font-size: .85rem; white-space: nowrap;
 }
 
+/* "Nueva carpeta": hermano inverso de .btn-primary ("Subir archivos").
+   Relleno carmesí en vez de negro, con el mismo relieve de borde inferior de 3px.
+   Lo usan el botón del explorador (#btnNuevaCarpeta) y el del estado vacío (BOTONES_VACIO). */
+.btn-folder {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    background: linear-gradient(180deg, #d91434 0%, #b80d29 100%);
+    color: #ffffff; font-weight: 600; font-size: .92rem; letter-spacing: .01em; white-space: nowrap;
+    border: 1px solid #a30b24; border-bottom: 3px solid #6e0617; border-radius: 8px;
+    /* Misma altura que .btn-primary: se descuenta el borde de 1px que este no tiene. */
+    padding: calc(.7rem - 1px) calc(1.25rem - 1px) .7rem;
+    box-shadow: 0 3px 8px rgba(200, 16, 46, 0.22);
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.btn-folder:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 14px rgba(200, 16, 46, 0.30);
+    filter: brightness(1.05);
+}
+.btn-folder:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(200, 16, 46, 0.22);
+    filter: none;
+}
+.btn-folder:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.btn-folder svg { stroke: currentColor; fill: none; flex-shrink: 0; }
+
+/* Variante compacta para la barra del explorador (mismo tamaño que .btn-ghost.btn-sm). */
+.btn-folder.btn-sm { gap: .4rem; padding: calc(.45rem - 1px) calc(.8rem - 1px) calc(.45rem - 2px); font-size: .85rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-folder:hover, .btn-folder:active { transform: none; }
+}
+
 /* Barra de ubicación: Área › Carpeta › Subcarpeta */
 .explorer {
     display: flex; align-items: center; justify-content: space-between; gap: .6rem 1rem; flex-wrap: wrap;
@@ -534,6 +567,7 @@ dialog.dialog-lg { width: min(1040px, calc(100% - 2rem)); }
 .badge.b-RENAME_FOLDER { background: #fdf0e6; color: #a34a12; }
 .badge.b-DELETE_DOCUMENT { background: var(--red-tint); color: var(--red-dark); }
 .badge.b-UPDATE_USER { background: #efe9f7; color: #5b3f8c; }
+.badge.b-DELETE_USER { background: var(--red-tint); color: var(--red-dark); }
 
 /* ================= GESTIÓN DE USUARIOS ================= */
 
@@ -545,6 +579,26 @@ dialog.dialog-lg { width: min(1040px, calc(100% - 2rem)); }
 .chip.is-invalid { background: var(--red-tint); color: var(--red-dark); box-shadow: inset 0 0 0 1px #efc3cb; }
 tr.is-updated td { animation: fila-actualizada 1.8s ease-out; }
 @keyframes fila-actualizada { from { background: #e6f2ec; } }
+
+/* Eliminar usuario: botón de solo ícono (papelera) junto a "Editar".
+   Discreto en reposo; el fondo rosado en :hover anticipa que la acción es destructiva. */
+.btn-eliminar-usuario {
+    display: inline-grid; place-items: center; flex-shrink: 0;
+    width: 2rem; height: 2rem; padding: 0;
+    background: transparent; color: #c8102e;
+    border: 1px solid transparent; border-radius: 7px; cursor: pointer;
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+.btn-eliminar-usuario:hover { background: #ffe8eb; border-color: #f5c6ce; color: var(--red-dark); }
+.btn-eliminar-usuario:disabled { opacity: .5; cursor: progress; background: transparent; border-color: transparent; }
+.btn-eliminar-usuario svg { stroke: currentColor; fill: none; }
+
+/* En lugar de la papelera, en la fila de quien tiene la sesión abierta. */
+.etiqueta-tu {
+    display: inline-flex; align-items: center; height: 2rem; padding: 0 .6rem;
+    font-size: .74rem; font-weight: 700; letter-spacing: .02em; color: var(--muted);
+    border: 1px dashed var(--line-strong); border-radius: 7px; cursor: default; user-select: none;
+}
 
 /* ================= COMPATIBILIDAD (index.html) ================= */
 

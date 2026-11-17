@@ -113,8 +113,8 @@
                 <nav aria-label="Ubicación">
                     <ol class="crumbs" id="migas"></ol>
                 </nav>
-                <button type="button" class="btn-ghost btn-sm" id="btnNuevaCarpeta" data-nueva-carpeta>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/></svg>
+                <button type="button" class="btn-folder btn-sm" id="btnNuevaCarpeta" data-nueva-carpeta>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5v5M9.5 13h5"/></svg>
                     Nueva carpeta
                 </button>
             </div>
@@ -296,7 +296,7 @@
         <div class="modal-head">
             <div>
                 <h2 id="usuariosTitulo">Gestión de usuarios</h2>
-                <p class="modal-sub">Cuentas registradas en el portal. Puedes corregir el correo y el área de cada persona. Solo visible para administradores.</p>
+                <p class="modal-sub">Cuentas registradas en el portal. Puedes corregir el correo y el área de cada persona, o eliminar su cuenta. Solo visible para administradores.</p>
             </div>
             <button type="button" class="modal-close" data-cerrar-usuarios aria-label="Cerrar">×</button>
         </div>
@@ -464,6 +464,7 @@
             CREATE_FOLDER: 'Creó carpeta',
             RENAME_FOLDER: 'Renombró carpeta',
             UPDATE_USER: 'Editó usuario',
+            DELETE_USER: 'Eliminó usuario',
         };
 
         async function mensajeError(res, porDefecto) {
@@ -612,6 +613,8 @@
                 if (obj && typeof obj === 'object') {
                     const u = obj.usuario || obj;
                     return {
+                        // Identifica la fila propia en Gestión de usuarios (no se puede eliminar)
+                        id: Number(u.id) || null,
                         nombre: u.nombre || u.correo || 'Usuario',
                         rol: u.rol || '',
                         departamento: u.departamento || 'General',
@@ -876,7 +879,9 @@
 
         const ICONO_VACIO = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
         const ICONO_CARPETA_VACIA = `<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUTA_CARPETA}</svg>`;
-        const BOTONES_VACIO = '<div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivos</button><button type="button" class="btn-ghost" data-nueva-carpeta>Nueva carpeta</button></div>';
+        // Mismo ícono folder-plus que #btnNuevaCarpeta, para que ambos botones se vean iguales.
+        const ICONO_NUEVA_CARPETA = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5v5M9.5 13h5"/></svg>';
+        const BOTONES_VACIO = `<div class="state-actions"><button type="button" class="btn-primary" data-abrir-modal>Subir archivos</button><button type="button" class="btn-folder" data-nueva-carpeta>${ICONO_NUEVA_CARPETA}Nueva carpeta</button></div>`;
 
         function pintarEstado(html) { $('estado').innerHTML = html; }
 
@@ -1478,13 +1483,17 @@
                 ? `<span class="chip a-${slug(u.departamento)}">${esc(u.departamento)}</span>`
                 // Área antigua (p. ej. "Producción"): el usuario recibe 403 hasta que se le asigne una válida
                 : `<span class="chip is-invalid" title="Esta área ya no existe. Edita al usuario para asignarle una válida.">${esc(u.departamento || 'Sin área')}</span>`;
+            // El administrador con la sesión abierta no puede eliminarse (el backend también lo impide)
+            const eliminar = u.id === sesion.id
+                ? '<span class="etiqueta-tu" title="Tu propia cuenta no se puede eliminar">Tú</span>'
+                : `<button type="button" class="btn-eliminar-usuario" data-eliminar-usuario="${u.id}" aria-label="Eliminar a ${esc(u.nombre)}" title="Eliminar usuario">${ICO_ELIMINAR}</button>`;
             return `
                 <tr data-fila-usuario="${u.id}">
                     <td class="user-id col-hide-sm">${u.id}</td>
                     <td><div class="by"><span class="avatar" aria-hidden="true">${esc(iniciales(u.nombre))}</span><span class="by-text">${esc(u.nombre)}${esRolAdmin(u.rol) ? '<small>Administrador</small>' : ''}</span></div></td>
                     <td class="user-email">${esc(u.email)}</td>
                     <td>${area}</td>
-                    <td><button type="button" class="action-link" data-editar-usuario="${u.id}" aria-label="Editar a ${esc(u.nombre)}">${ICO_EDITAR}<span>Editar</span></button></td>
+                    <td><div class="actions"><button type="button" class="action-link" data-editar-usuario="${u.id}" aria-label="Editar a ${esc(u.nombre)}">${ICO_EDITAR}<span>Editar</span></button>${eliminar}</div></td>
                 </tr>`;
         }
 
@@ -1581,6 +1590,40 @@
                 aviso('Error de conexión con el servidor.');
             } finally {
                 btn.disabled = false; btn.textContent = 'Guardar cambios';
+            }
+        }
+
+        // 4. DELETE /usuarios/:id → borrado lógico: pierde el acceso al instante y
+        //    sus documentos y registros de auditoría se conservan.
+        async function eliminarUsuario(id, btn) {
+            const usuario = gestion.usuarios.find(x => x.id === id);
+            if (!usuario || usuario.id === sesion.id) return;
+
+            const ok = await confirmar({
+                titulo: 'Eliminar usuario',
+                mensaje: `¿Estás seguro de eliminar a ${usuario.nombre}? Perderá el acceso al sistema de inmediato.`,
+            });
+            if (!ok) return;
+
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${API_BASE}/usuarios/${usuario.id}`, {
+                    method: 'DELETE',
+                    headers: authHeaders(),
+                });
+                if (res.status === 401) { cerrarSesion(); return; }
+                if (!res.ok) {
+                    aviso(await mensajeError(res, 'No se pudo eliminar el usuario.'));
+                    if (res.status === 404) cargarUsuarios(); // ya estaba eliminado: refresca la lista
+                    return;
+                }
+                aviso(`${usuario.nombre} fue eliminado y ya no tiene acceso al sistema.`, true);
+                await cargarUsuarios();
+            } catch (err) {
+                console.error('Error al eliminar el usuario:', err);
+                aviso('Error de conexión con el servidor.');
+            } finally {
+                btn.disabled = false;
             }
         }
 
@@ -1782,6 +1825,8 @@
                 if (e.target.closest('[data-cerrar-usuarios]')) { dlgUsuarios.close(); return; }
                 const btnEditar = e.target.closest('[data-editar-usuario]');
                 if (btnEditar) { abrirEditarUsuario(+btnEditar.dataset.editarUsuario); return; }
+                const btnEliminar = e.target.closest('[data-eliminar-usuario]');
+                if (btnEliminar) { eliminarUsuario(+btnEliminar.dataset.eliminarUsuario, btnEliminar); return; }
                 if (e.target.closest('#btnUsuariosReintentar')) cargarUsuarios();
             });
             dlgUsuarios.addEventListener('cancel', (e) => e.preventDefault()); // sin cierre con Escape
