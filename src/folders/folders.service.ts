@@ -120,6 +120,9 @@ export class FoldersService {
 
     const qb = this.carpetaRepository
       .createQueryBuilder('carpeta')
+      // Creadores eliminados (borrado lógico) incluidos: "Creada por" conserva su nombre.
+      // Debe ir ANTES del join: TypeORM añade "fecha_eliminacion IS NULL" al crearlo.
+      .withDeleted()
       .leftJoin('carpeta.usuario', 'usuario')
       .addSelect(['usuario.id', 'usuario.nombre'])
       .orderBy('carpeta.departamento', 'ASC')
@@ -330,6 +333,7 @@ export class FoldersService {
     const actualizada = await this.carpetaRepository.findOne({
       where: { id: carpeta.id },
       relations: { usuario: true },
+      withDeleted: true, // el creador pudo haber sido eliminado (borrado lógico)
     });
     return serializarCarpeta(actualizada ?? { ...carpeta, nombre });
   }

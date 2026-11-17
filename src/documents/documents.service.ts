@@ -252,6 +252,9 @@ export class DocumentsService {
 
     const qb = this.documentoRepository
       .createQueryBuilder('doc')
+      // Autores eliminados (borrado lógico) incluidos: "Subido por" conserva su nombre.
+      // Debe ir ANTES del join: TypeORM añade "fecha_eliminacion IS NULL" al crearlo.
+      .withDeleted()
       // Solo se trae el nombre del usuario (nunca su contraseña ni otros datos).
       .leftJoin('doc.usuario', 'usuario')
       .addSelect(['usuario.id', 'usuario.nombre'])
@@ -277,6 +280,9 @@ export class DocumentsService {
 
     const qb = this.documentoRepository
       .createQueryBuilder('doc')
+      // Autores eliminados (borrado lógico) incluidos: "Subido por" conserva su nombre.
+      // Debe ir ANTES del join: TypeORM añade "fecha_eliminacion IS NULL" al crearlo.
+      .withDeleted()
       // Solo se trae el nombre del usuario (nunca su contraseña ni otros datos).
       .leftJoin('doc.usuario', 'usuario')
       .addSelect(['usuario.id', 'usuario.nombre']);
