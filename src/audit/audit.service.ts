@@ -28,7 +28,7 @@ export class AuditService {
    *
    * Es "best effort": si la escritura del log falla, se informa en el log del
    * servidor pero NO se revierte la operación del usuario (el archivo ya está en
-   * R2 y en la BD). Si prefieres que un fallo de auditoría bloquee la operación,
+   * B2 y en la BD). Si prefieres que un fallo de auditoría bloquee la operación,
    * basta con relanzar el error en el catch.
    */
   async registrar(entradas: EntradaAuditoria | EntradaAuditoria[]): Promise<void> {

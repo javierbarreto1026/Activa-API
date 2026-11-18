@@ -90,7 +90,7 @@ export function motivoTipoNoPermitido(nombre: string, mimetype: string): string 
 
 export const opcionesSubida: MulterOptions = {
   // El archivo se mantiene en RAM (file.buffer) solo durante la petición y se envía
-  // directo a Cloudflare R2 (o, sin credenciales de R2, a /uploads). El límite de
+  // directo a Backblaze B2 (o, sin credenciales de B2, a /uploads). El límite de
   // tamaño de abajo acota la memoria que puede consumir cada subida.
   storage: memoryStorage(),
   // Los navegadores envían el nombre del archivo en UTF-8. Con el valor por defecto

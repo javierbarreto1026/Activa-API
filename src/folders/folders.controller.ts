@@ -50,7 +50,7 @@ export class FoldersController {
   }
 
   // DELETE /folders/4 (solo administradores, como DELETE /documents/:id: borrar una
-  // carpeta borra también sus subcarpetas y documentos, en MySQL y en Cloudflare R2).
+  // carpeta borra también sus subcarpetas y documentos, en MySQL y en Backblaze B2).
   @UseGuards(RolesGuard)
   @Roles(...ROLES_ADMIN)
   @Delete(':id')

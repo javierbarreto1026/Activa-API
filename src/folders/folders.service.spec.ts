@@ -28,7 +28,7 @@ const rrhh = usuario(3, 'usuario', 'Recursos Humanos');
 /** Ids del criterio `{ id: In([...]) }` con que se llamó a `em.delete`. */
 const idsBorrados = (criterio: unknown) => (criterio as { id: FindOperator<number[]> }).id.value;
 
-const R2 = 'https://cuenta.r2.cloudflarestorage.com/bucket/';
+const B2 = 'https://s3.us-east-005.backblazeb2.com/bucket-prueba/';
 const ANTES_1 = 'documentos/sst/fichas/chaqueta-aaaa1111.jpg';
 const ANTES_2 = 'documentos/sst/fichas/2026/manual-bbbb2222.pdf';
 const DESPUES_1 = 'documentos/sst/fichas-tecnicas/chaqueta-aaaa1111.jpg';
@@ -42,17 +42,17 @@ describe('FoldersService', () => {
     delete: jest.Mock<(...args: unknown[]) => Promise<void>>;
   };
   let almacenamiento: {
-    usaR2: boolean;
-    copiarEnR2: jest.Mock<(origen: string, destino: string) => Promise<void>>;
-    eliminarClavesR2: jest.Mock<(claves: readonly string[]) => Promise<void>>;
+    usaB2: boolean;
+    copiarEnB2: jest.Mock<(origen: string, destino: string) => Promise<void>>;
+    eliminarClavesB2: jest.Mock<(claves: readonly string[]) => Promise<void>>;
     eliminar: jest.Mock<(archivo: Documento) => Promise<void>>;
-    urlR2: jest.Mock<(clave: string) => string>;
+    urlB2: jest.Mock<(clave: string) => string>;
   };
   let auditoria: { registrar: jest.Mock<(...args: unknown[]) => Promise<void>> };
   let service: FoldersService;
 
   beforeEach(() => {
-    // Silencia los logs de error esperados (p. ej. "R2 caído") sin tocar el Logger real.
+    // Silencia los logs de error esperados (p. ej. "B2 caído") sin tocar el Logger real.
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 
     carpetas = [
@@ -61,9 +61,9 @@ describe('FoldersService', () => {
       { id: 12, nombre: 'Otra', departamento: 'SST', padreId: null, usuarioId: 2 },
     ] as Carpeta[];
     documentos = [
-      { id: 1, carpetaId: 10, nombreGuardado: ANTES_1, ruta: R2 + ANTES_1 },
-      { id: 2, carpetaId: 11, nombreGuardado: ANTES_2, ruta: R2 + ANTES_2 },
-      // Documento del respaldo local: no se mueve en R2.
+      { id: 1, carpetaId: 10, nombreGuardado: ANTES_1, ruta: B2 + ANTES_1 },
+      { id: 2, carpetaId: 11, nombreGuardado: ANTES_2, ruta: B2 + ANTES_2 },
+      // Documento del respaldo local: no se mueve en B2.
       { id: 3, carpetaId: 11, nombreGuardado: 'local.pdf', ruta: '/uploads/local.pdf' },
     ] as Documento[];
 
@@ -125,11 +125,11 @@ describe('FoldersService', () => {
     };
 
     almacenamiento = {
-      usaR2: true,
-      copiarEnR2: jest.fn(() => Promise.resolve()),
-      eliminarClavesR2: jest.fn(() => Promise.resolve()),
+      usaB2: true,
+      copiarEnB2: jest.fn(() => Promise.resolve()),
+      eliminarClavesB2: jest.fn(() => Promise.resolve()),
       eliminar: jest.fn(() => Promise.resolve()),
-      urlR2: jest.fn((clave: string) => R2 + clave),
+      urlB2: jest.fn((clave: string) => B2 + clave),
     };
     auditoria = { registrar: jest.fn(() => Promise.resolve()) };
 
@@ -142,11 +142,11 @@ describe('FoldersService', () => {
   });
 
   describe('renombrar', () => {
-    it('mueve en R2 los objetos de la carpeta y de sus subcarpetas, y actualiza la BD', async () => {
+    it('mueve en B2 los objetos de la carpeta y de sus subcarpetas, y actualiza la BD', async () => {
       const resultado = await service.renombrar(10, { nombre: 'Fichas técnicas' }, ana);
 
       expect(resultado.nombre).toBe('Fichas técnicas');
-      expect(almacenamiento.copiarEnR2.mock.calls).toEqual([
+      expect(almacenamiento.copiarEnB2.mock.calls).toEqual([
         [ANTES_1, DESPUES_1],
         [ANTES_2, DESPUES_2],
       ]);
@@ -154,36 +154,36 @@ describe('FoldersService', () => {
       expect(em.update).toHaveBeenCalledWith(
         Documento,
         { id: 1 },
-        { nombreGuardado: DESPUES_1, ruta: R2 + DESPUES_1 },
+        { nombreGuardado: DESPUES_1, ruta: B2 + DESPUES_1 },
       );
       expect(em.update).toHaveBeenCalledWith(
         Documento,
         { id: 2 },
-        { nombreGuardado: DESPUES_2, ruta: R2 + DESPUES_2 },
+        { nombreGuardado: DESPUES_2, ruta: B2 + DESPUES_2 },
       );
       // Los originales se borran solo después de confirmar la transacción.
-      expect(almacenamiento.eliminarClavesR2).toHaveBeenLastCalledWith([ANTES_1, ANTES_2]);
+      expect(almacenamiento.eliminarClavesB2).toHaveBeenLastCalledWith([ANTES_1, ANTES_2]);
       expect(auditoria.registrar).toHaveBeenCalledWith(
         expect.objectContaining({ accion: 'RENAME_FOLDER', departamento: 'SST' }),
       );
     });
 
     it('si una copia falla, borra las copias hechas y no toca la BD ni los originales', async () => {
-      almacenamiento.copiarEnR2.mockImplementation((origen) =>
-        origen === ANTES_2 ? Promise.reject(new Error('R2 caído')) : Promise.resolve(),
+      almacenamiento.copiarEnB2.mockImplementation((origen) =>
+        origen === ANTES_2 ? Promise.reject(new Error('B2 caído')) : Promise.resolve(),
       );
 
       await expect(service.renombrar(10, { nombre: 'Fichas técnicas' }, ana)).rejects.toThrow(
         InternalServerErrorException,
       );
       expect(em.update).not.toHaveBeenCalled();
-      expect(almacenamiento.eliminarClavesR2.mock.calls).toEqual([[[DESPUES_1]]]);
+      expect(almacenamiento.eliminarClavesB2.mock.calls).toEqual([[[DESPUES_1]]]);
       expect(auditoria.registrar).not.toHaveBeenCalled();
     });
 
     it('si el prefijo no cambia (solo mayúsculas), solo actualiza la BD', async () => {
       await service.renombrar(10, { nombre: 'FICHAS' }, ana);
-      expect(almacenamiento.copiarEnR2).not.toHaveBeenCalled();
+      expect(almacenamiento.copiarEnB2).not.toHaveBeenCalled();
       expect(em.update).toHaveBeenCalledTimes(1);
     });
 
@@ -195,7 +195,7 @@ describe('FoldersService', () => {
 
     it('un usuario de otra área recibe 404 y no se mueve nada', async () => {
       await expect(service.renombrar(10, { nombre: 'X' }, rrhh)).rejects.toThrow(NotFoundException);
-      expect(almacenamiento.copiarEnR2).not.toHaveBeenCalled();
+      expect(almacenamiento.copiarEnB2).not.toHaveBeenCalled();
     });
   });
 
@@ -219,7 +219,7 @@ describe('FoldersService', () => {
         [Carpeta, [11]],
         [Carpeta, [10]],
       ]);
-      // Archivos de R2 y del respaldo local, solo después de confirmar la transacción.
+      // Archivos de B2 y del respaldo local, solo después de confirmar la transacción.
       expect(almacenamiento.eliminar.mock.calls.map(([doc]) => doc.nombreGuardado)).toEqual([
         ANTES_1,
         ANTES_2,
@@ -270,8 +270,8 @@ describe('FoldersService', () => {
       expect(auditoria.registrar).not.toHaveBeenCalled();
     });
 
-    it('si hay archivos en R2 pero R2 no está configurado, no toca nada', async () => {
-      almacenamiento.usaR2 = false;
+    it('si hay archivos en B2 pero B2 no está configurado, no toca nada', async () => {
+      almacenamiento.usaB2 = false;
 
       await expect(service.eliminarCarpeta(10, admin)).rejects.toThrow(
         InternalServerErrorException,

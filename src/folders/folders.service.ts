@@ -20,7 +20,7 @@ import { enParalelo } from '../common/en-paralelo';
 import { type Departamento } from '../common/departamentos';
 import { normalizarTexto } from '../common/texto';
 import { Documento } from '../documents/documento.entity';
-import { AlmacenamientoService, estaEnR2 } from '../storage/almacenamiento.service';
+import { AlmacenamientoService, estaEnB2 } from '../storage/almacenamiento.service';
 import { reubicarClave } from '../storage/claves';
 import { Carpeta } from './carpeta.entity';
 import type { CrearCarpetaDto } from './dto/crear-carpeta.dto';
@@ -313,7 +313,7 @@ export class FoldersService {
   /* --------------------------- Renombrar ---------------------------- */
 
   /**
-   * Cambia el nombre de la carpeta y reubica en Cloudflare R2 los objetos de la carpeta
+   * Cambia el nombre de la carpeta y reubica en Backblaze B2 los objetos de la carpeta
    * y de todas sus subcarpetas (las claves contienen el nombre de la carpeta):
    *
    *   1. Copia cada objeto a su clave nueva. Si alguna copia falla, borra las copias
@@ -347,7 +347,7 @@ export class FoldersService {
         departamento: carpeta.departamento,
         detalles:
           `Renombró la carpeta "${anterior}" a "${nombre}" (id ${carpeta.id})` +
-          (reubicados > 0 ? `; ${reubicados} archivo(s) reubicados en R2` : ''),
+          (reubicados > 0 ? `; ${reubicados} archivo(s) reubicados en B2` : ''),
       });
     }
 
@@ -359,7 +359,7 @@ export class FoldersService {
     return serializarCarpeta(actualizada ?? { ...carpeta, nombre });
   }
 
-  /** Devuelve cuántos objetos se movieron en R2. */
+  /** Devuelve cuántos objetos se movieron en B2. */
   private async renombrarYReubicar(carpeta: Carpeta, nombre: string): Promise<number> {
     // Todo el árbol del área en memoria: rutas nuevas y subcarpetas sin N consultas.
     const delArea = await this.carpetaRepository.find({
@@ -374,7 +374,7 @@ export class FoldersService {
     });
 
     const movimientos = documentos
-      .filter((doc) => estaEnR2(doc) && doc.carpetaId !== null)
+      .filter((doc) => estaEnB2(doc) && doc.carpetaId !== null)
       .map((doc) => ({
         doc,
         origen: doc.nombreGuardado,
@@ -386,9 +386,9 @@ export class FoldersService {
       }))
       .filter((m) => m.origen !== m.destino);
 
-    if (movimientos.length > 0 && !this.almacenamiento.usaR2) {
+    if (movimientos.length > 0 && !this.almacenamiento.usaB2) {
       throw new InternalServerErrorException(
-        'La carpeta contiene archivos en Cloudflare R2, pero R2 no está configurado en el servidor.',
+        'La carpeta contiene archivos en Backblaze B2, pero B2 no está configurado en el servidor.',
       );
     }
 
@@ -396,7 +396,7 @@ export class FoldersService {
     const copiadas: string[] = [];
     try {
       await enParalelo(movimientos, CONCURRENCIA_ARCHIVOS, async (m) => {
-        await this.almacenamiento.copiarEnR2(m.origen, m.destino);
+        await this.almacenamiento.copiarEnB2(m.origen, m.destino);
         copiadas.push(m.destino);
       });
     } catch (err) {
@@ -404,9 +404,9 @@ export class FoldersService {
         `Error copiando objetos al renombrar la carpeta ${carpeta.id}`,
         err as Error,
       );
-      await this.almacenamiento.eliminarClavesR2(copiadas);
+      await this.almacenamiento.eliminarClavesB2(copiadas);
       throw new InternalServerErrorException(
-        'No se pudieron mover los archivos de la carpeta en Cloudflare R2. ' +
+        'No se pudieron mover los archivos de la carpeta en Backblaze B2. ' +
           'No se realizó ningún cambio; inténtalo de nuevo.',
       );
     }
@@ -419,17 +419,17 @@ export class FoldersService {
           await em.update(
             Documento,
             { id: m.doc.id },
-            { nombreGuardado: m.destino, ruta: this.almacenamiento.urlR2(m.destino) },
+            { nombreGuardado: m.destino, ruta: this.almacenamiento.urlB2(m.destino) },
           );
         }
       });
     } catch (err) {
-      await this.almacenamiento.eliminarClavesR2(copiadas);
+      await this.almacenamiento.eliminarClavesB2(copiadas);
       throw err;
     }
 
     // 3) Los originales ya no los referencia nadie.
-    await this.almacenamiento.eliminarClavesR2(movimientos.map((m) => m.origen));
+    await this.almacenamiento.eliminarClavesB2(movimientos.map((m) => m.origen));
 
     return movimientos.length;
   }
@@ -438,16 +438,16 @@ export class FoldersService {
 
   /**
    * Elimina la carpeta junto con todas sus subcarpetas y documentos, en MySQL y en
-   * Cloudflare R2 (o en /uploads para los archivos del respaldo local):
+   * Backblaze B2 (o en /uploads para los archivos del respaldo local):
    *
-   *   1. Lee el subárbol y sus documentos. Si hay archivos en R2 pero R2 no está
+   *   1. Lee el subárbol y sus documentos. Si hay archivos en B2 pero B2 no está
    *      configurado, responde error sin tocar nada: no se podrían borrar.
    *   2. En una transacción borra los documentos y después las carpetas, de las más
    *      profundas a la raíz (las claves foráneas impiden borrar una carpeta que aún
    *      tiene documentos o subcarpetas). Si falla, no cambia nada.
    *   3. Borra los archivos, que ya no referencia ningún registro.
    *
-   * Igual que en `renombrar`, lo irreversible en R2 va DESPUÉS de confirmar la BD: si
+   * Igual que en `renombrar`, lo irreversible en B2 va DESPUÉS de confirmar la BD: si
    * se borraran antes y la transacción fallara (p. ej. alguien subió un archivo a la
    * carpeta en ese instante), quedarían documentos apuntando a archivos inexistentes.
    * En este orden, el peor caso es un objeto huérfano, que queda registrado en el log.
@@ -468,9 +468,9 @@ export class FoldersService {
       where: { carpetaId: In(afectadas) },
     });
 
-    if (documentos.some(estaEnR2) && !this.almacenamiento.usaR2) {
+    if (documentos.some(estaEnB2) && !this.almacenamiento.usaB2) {
       throw new InternalServerErrorException(
-        'La carpeta contiene archivos en Cloudflare R2, pero R2 no está configurado en el servidor.',
+        'La carpeta contiene archivos en Backblaze B2, pero B2 no está configurado en el servidor.',
       );
     }
 
@@ -497,7 +497,7 @@ export class FoldersService {
       );
     }
 
-    // 3) Archivos (R2 o /uploads). `eliminar` nunca lanza: los fallos quedan en el log.
+    // 3) Archivos (B2 o /uploads). `eliminar` nunca lanza: los fallos quedan en el log.
     await enParalelo(documentos, CONCURRENCIA_ARCHIVOS, (doc) => this.almacenamiento.eliminar(doc));
 
     const subcarpetas = afectadas.length - 1;

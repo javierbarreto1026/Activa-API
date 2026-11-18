@@ -1,7 +1,7 @@
 import { slug } from '../common/texto';
 import { claveDocumento, prefijoCarpeta, reubicarClave } from './claves';
 
-describe('claves de Cloudflare R2', () => {
+describe('claves de Backblaze B2', () => {
   it('genera documentos/<area>/<carpetas>/<archivo>-<id>.<ext> con segmentos seguros', () => {
     const clave = claveDocumento(
       'Recursos Humanos',

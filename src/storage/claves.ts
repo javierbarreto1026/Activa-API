@@ -3,7 +3,7 @@ import { extname } from 'node:path';
 import { slug } from '../common/texto';
 
 /**
- * Claves de objeto en Cloudflare R2 con estructura jerárquica legible:
+ * Claves de objeto en Backblaze B2 con estructura jerárquica legible:
  *
  *   documentos/<area>/<carpeta>/<subcarpeta>/<nombre-del-archivo>-<id>.<ext>
  *   p. ej. documentos/recursos-humanos/contratos-2026/contrato-juan-perez-1a2b3c4d.pdf

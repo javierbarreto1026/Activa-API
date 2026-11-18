@@ -3,7 +3,7 @@
  *
  * Si una tarea falla deja de iniciar tareas nuevas, ESPERA a que terminen las que
  * ya estaban en curso y luego relanza el primer error. Así, quien llama puede
- * limpiar (p. ej. borrar copias en R2) sabiendo que ya no queda nada ejecutándose.
+ * limpiar (p. ej. borrar copias en B2) sabiendo que ya no queda nada ejecutándose.
  */
 export async function enParalelo<T>(
   elementos: readonly T[],

@@ -58,7 +58,7 @@ export class DocumentsController {
     verificarContenidoArchivo(file);
 
     // El archivo solo vive en RAM: si algo falla no queda nada que limpiar en disco,
-    // y el servicio se encarga de no dejar objetos huérfanos en Cloudflare R2.
+    // y el servicio se encarga de no dejar objetos huérfanos en Backblaze B2.
     return this.documentsService.guardarDocumento(file, usuario, datos);
   }
 
@@ -127,7 +127,7 @@ export class DocumentsController {
     @UsuarioActual() usuario: UsuarioSesion,
     @Res() res: Response,
   ) {
-    // El bucket es privado: el backend lee el objeto de Cloudflare R2 y lo transmite al cliente,
+    // El bucket es privado: el backend lee el objeto de Backblaze B2 y lo transmite al cliente,
     // así la descarga sigue protegida por el JWT y por el área. Los errores (404/500) los responde Nest.
     const archivo = await this.documentsService.obtenerArchivo(id, usuario);
 
@@ -135,7 +135,7 @@ export class DocumentsController {
     if (archivo.tipo) res.type(archivo.tipo);
     if (archivo.tamano !== undefined) res.setHeader('Content-Length', archivo.tamano);
 
-    // pipeline cierra ambos streams si el cliente cancela o R2 corta la conexión.
+    // pipeline cierra ambos streams si el cliente cancela o B2 corta la conexión.
     await pipeline(archivo.contenido, res).catch(() => res.destroy());
   }
 

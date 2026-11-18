@@ -27,7 +27,7 @@ const FECHA_EFECTIVA = 'COALESCE(doc.fecha, doc.fechaSubida)';
 
 const FORMATO_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Archivos de un lote que se suben a R2 a la vez en la carga masiva. */
+/** Archivos de un lote que se suben a B2 a la vez en la carga masiva. */
 const SUBIDAS_SIMULTANEAS = 4;
 
 export interface FiltrosDocumentos {
@@ -340,7 +340,7 @@ export class DocumentsService {
     return doc;
   }
 
-  /** Obtiene el contenido del documento (desde Cloudflare R2 o del respaldo local). */
+  /** Obtiene el contenido del documento (desde Backblaze B2 o del respaldo local). */
   async obtenerArchivo(id: number, usuario: UsuarioSesion): Promise<ArchivoDescargable> {
     const doc = await this.findOne(id, usuario);
     return this.almacenamiento.obtener(doc);
@@ -353,7 +353,7 @@ export class DocumentsService {
 
     await this.documentoRepository.delete(doc.id);
 
-    // Borra también el archivo para no acumular espacio (Cloudflare R2 o /uploads).
+    // Borra también el archivo para no acumular espacio (Backblaze B2 o /uploads).
     await this.almacenamiento.eliminar(doc);
 
     await this.auditoria.registrar({

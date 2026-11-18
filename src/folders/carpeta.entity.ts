@@ -18,7 +18,7 @@ import { Usuario } from '../usuarios/usuario.entity';
  * (null = carpeta en la raíz del área). Todas las carpetas de un árbol comparten
  * el departamento de su raíz.
  *
- * En Cloudflare R2 los documentos se guardan bajo:
+ * En Backblaze B2 los documentos se guardan bajo:
  *   documentos/<area>/<carpeta>/<subcarpeta>/<archivo>
  *
  * Claves foráneas que genera TypeORM (las crea el lado ManyToOne):
