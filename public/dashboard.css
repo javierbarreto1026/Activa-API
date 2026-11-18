@@ -82,6 +82,42 @@ button { cursor: pointer; }
 }
 .nav-link:hover { color: #fff; background: var(--ink-soft); }
 
+/* Campana de Auditoría con contador de acciones nuevas */
+.btn-notificaciones {
+    position: relative;
+    display: grid; place-items: center; flex-shrink: 0;
+    width: 38px; height: 38px; margin-left: .25rem; padding: 0;
+    background: transparent; border: 0; border-radius: 50%;
+    color: #d1d5db;
+    transition: background-color .2s ease, color .2s ease;
+}
+.btn-notificaciones:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+.btn-notificaciones svg { display: block; transform-origin: 50% 3px; } /* gira desde el colgante */
+
+.badge-notificaciones {
+    position: absolute; top: 2px; right: 2px;
+    min-width: 18px; padding: 1px 5px;
+    background: #c8102e; color: #ffffff;
+    border: 2px solid var(--ink); /* mismo negro del header: recorta el badge sobre la campana */
+    border-radius: 999px;
+    font-size: 10px; font-weight: 700; line-height: 12px;
+    text-align: center; font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+.btn-notificaciones.is-sonando svg { animation: campanazo .9s ease-in-out; }
+.btn-notificaciones.is-sonando .badge-notificaciones { animation: badge-entrada .3s ease-out; }
+
+@keyframes campanazo {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(9deg); }
+    60% { transform: rotate(-6deg); }
+    75% { transform: rotate(3deg); }
+}
+@keyframes badge-entrada { from { transform: scale(.4); opacity: 0; } }
+
 .user-chip {
     display: flex; align-items: center; gap: .75rem;
     padding-left: 1.5rem; border-left: 1px solid #343437;
@@ -770,6 +806,106 @@ tr.is-updated td { animation: fila-actualizada 1.8s ease-out; }
   border-radius: 6px;
   letter-spacing: 0.5px;
 }
+
+/* ================= ESCANEO DE VARIAS HOJAS ================= */
+
+/* Envoltorio del botón de escaneo (antes, estilo en línea en el HTML) */
+.escaner-zona { margin-top: 15px; text-align: center; }
+
+/* Vista previa: hojas fotografiadas pendientes de unirse en un solo PDF */
+.escaneo {
+    display: grid; gap: .75rem; margin-top: .75rem; padding: .9rem;
+    text-align: left; background: #fffafb; border: 1px solid #f3c6cc; border-radius: 10px;
+}
+.escaneo-head { display: grid; gap: .1rem; }
+.escaneo-titulo { font-size: .9rem; font-weight: 800; color: var(--text); }
+.escaneo-ayuda { font-size: .78rem; line-height: 1.4; color: var(--muted); }
+
+/* Interruptor "Modo documento": checkbox nativo (accesible, role="switch") oculto con .sr-only
+   y dibujado con el span hermano. Carmesí = activado. */
+.escaneo-modo {
+    display: grid; gap: .2rem; padding: .6rem .7rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+}
+.escaneo-modo-label {
+    position: relative; /* referencia del input .sr-only (position: absolute) */
+    display: flex; align-items: center; gap: .6rem; cursor: pointer;
+    font-size: .86rem; font-weight: 700; color: var(--text);
+}
+.escaneo-modo-switch {
+    position: relative; flex-shrink: 0; width: 38px; height: 22px;
+    background: var(--line-strong); border-radius: 999px;
+    transition: background-color .18s ease;
+}
+.escaneo-modo-switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(13, 13, 13, .3);
+    transition: transform .18s ease;
+}
+.escaneo-modo-label input:checked + .escaneo-modo-switch { background: #c8102e; }
+.escaneo-modo-label input:checked + .escaneo-modo-switch::after { transform: translateX(16px); }
+.escaneo-modo-label input:focus-visible + .escaneo-modo-switch { outline: 3px solid rgba(200, 16, 46, .45); outline-offset: 2px; }
+.escaneo-modo-label input:disabled ~ * { opacity: .55; cursor: progress; }
+.escaneo-modo-ayuda { padding-left: calc(38px + .6rem); font-size: .76rem; line-height: 1.4; color: var(--muted); }
+
+/* Avance mientras se procesan las fotos ("Procesando hoja 2…") */
+.escaneo-estado {
+    display: flex; align-items: center; gap: .5rem; margin: 0;
+    font-size: .82rem; font-weight: 700; color: var(--red-dark);
+}
+.escaneo-estado::before {
+    content: ""; flex-shrink: 0; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid #f3c6cc; border-top-color: #c8102e;
+    animation: escaneo-giro .8s linear infinite;
+}
+@keyframes escaneo-giro { to { transform: rotate(360deg); } }
+
+/* Miniaturas numeradas. Con muchas hojas la lista se desplaza en vez de alargar el modal. */
+.escaneo-hojas {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: .6rem;
+    margin: 0; padding: 2px; list-style: none; max-height: 270px; overflow-y: auto;
+}
+.escaneo-hojas:empty { display: none; } /* mientras se procesa la primera hoja */
+.hoja { position: relative; display: grid; gap: .3rem; min-width: 0; }
+.hoja-img {
+    /* contain: la hoja completa, sin recortes (se revisa antes de subir) */
+    display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: contain;
+    background: var(--surface-alt); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(13, 13, 13, .06);
+}
+.hoja-num { font-size: .74rem; font-weight: 700; text-align: center; color: var(--muted); }
+.hoja-quitar {
+    position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; padding: 0;
+    display: grid; place-items: center; font-size: 1.05rem; font-weight: 700; line-height: 1;
+    background: rgba(255, 255, 255, .95); color: #c8102e;
+    border: 1px solid #f3c6cc; border-radius: 50%; box-shadow: 0 1px 3px rgba(13, 13, 13, .18);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.hoja-quitar:hover { background: #c8102e; border-color: #c8102e; color: #fff; }
+.hoja-quitar:disabled { opacity: .5; cursor: not-allowed; }
+
+.escaneo-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.escaneo-acciones > button { flex: 1 1 140px; }
+
+/* Secundario: contorno discontinuo, como una hoja más por añadir */
+.btn-agregar-hoja {
+    padding: .6rem .9rem; font-size: .88rem; font-weight: 700; color: #c8102e;
+    background: var(--surface); border: 1.5px dashed #e3a1ac; border-radius: 8px;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+.btn-agregar-hoja:hover { background: #ffe8eb; border-color: #c8102e; }
+
+/* Principal: mismo relleno carmesí y relieve inferior que "Nueva carpeta" (.btn-folder) */
+.btn-subir-escaneo {
+    padding: calc(.6rem - 1px) .9rem .6rem; font-size: .88rem; font-weight: 700; white-space: nowrap;
+    color: #fff; background: linear-gradient(180deg, #d91434 0%, #b80d29 100%);
+    border: 1px solid #a30b24; border-bottom: 3px solid #6e0617; border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(200, 16, 46, .22);
+    transition: box-shadow .15s ease, filter .15s ease, transform .15s ease;
+}
+.btn-subir-escaneo:hover { filter: brightness(1.05); box-shadow: 0 6px 14px rgba(200, 16, 46, .3); }
+.btn-subir-escaneo:active { transform: translateY(1px); }
+.btn-agregar-hoja:disabled, .btn-subir-escaneo:disabled { opacity: .6; cursor: progress; transform: none; }
 
 @media (hover: hover) and (pointer: fine) {
   .btn-escaner-movil {

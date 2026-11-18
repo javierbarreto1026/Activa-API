@@ -39,7 +39,10 @@
 
                     <button type="button" class="nav-link" id="btnGestionAdmin" hidden>Gestión de Usuarios</button>
 
-                    <button type="button" class="nav-link" id="btnAuditoria" hidden>Auditoría</button>
+                    <button type="button" class="btn-notificaciones" id="btnAuditoria" title="Auditoría y actividad reciente" aria-label="Auditoría y actividad reciente" hidden>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        <span id="contadorNotificaciones" class="badge-notificaciones" hidden>0</span>
+                    </button>
                 </div>
 
                 <div class="user-chip">
@@ -182,9 +185,11 @@
                     <input type="file" id="inputArchivo" class="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.jpg,.jpeg,.png,.webp">
                     <!-- Selección de una carpeta completa (Chrome, Edge, Firefox y Safari) -->
                     <input type="file" id="inputCarpeta" class="sr-only" webkitdirectory directory multiple>
-                    <input type="file" id="inputCamara" class="sr-only" accept="image/*" capture="environment">
+                    <!-- Sin "capture": el celular muestra su selector (Cámara, CamScanner, Adobe Scan, Archivos…).
+                         Fotos → hojas de un PDF; PDF → se sube tal cual; otro formato → se rechaza en JS. -->
+                    <input type="file" id="inputCamara" class="sr-only" accept="*/*">
                 </div>
-                <div style="text-align: center; margin-top: 15px;">
+                <div class="escaner-zona">
     <label for="inputCamara" class="btn-escaner-movil">
   <div class="escaner-icono">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -194,10 +199,33 @@
   </div>
   <div class="escaner-texto">
     <span class="escaner-titulo">Escanear con cámara</span>
-    <span class="escaner-subtitulo">Toma una foto y se subirá como PDF</span>
+    <span class="escaner-subtitulo">Fotografía una o varias hojas, o elige un PDF</span>
   </div>
   <span class="escaner-badge">PDF</span>
 </label>
+
+                    <!-- Hojas fotografiadas pendientes de subir: se unen en un solo PDF -->
+                    <section class="escaneo" id="escaneo" aria-labelledby="escaneoTitulo" hidden>
+                        <div class="escaneo-head">
+                            <strong class="escaneo-titulo" id="escaneoTitulo">Documento escaneado</strong>
+                            <span class="escaneo-ayuda">Si una hoja salió borrosa, quítala con × y vuelve a tomarla.</span>
+                        </div>
+                        <!-- Filtro tipo escáner (papel blanco, texto nítido): se ve en las miniaturas y va al PDF -->
+                        <div class="escaneo-modo">
+                            <label class="escaneo-modo-label">
+                                <input type="checkbox" id="modoDocumento" class="sr-only" role="switch" aria-describedby="modoDocumentoAyuda" checked>
+                                <span class="escaneo-modo-switch" aria-hidden="true"></span>
+                                <span class="escaneo-modo-texto">Modo documento (blanco y negro nítido)</span>
+                            </label>
+                            <small class="escaneo-modo-ayuda" id="modoDocumentoAyuda">Desactívalo para conservar los colores, por ejemplo de una cédula o un sello.</small>
+                        </div>
+                        <p class="escaneo-estado" id="escaneoEstado" role="status" hidden></p>
+                        <ol class="escaneo-hojas" id="escaneoHojas"></ol>
+                        <div class="escaneo-acciones">
+                            <button type="button" class="btn-agregar-hoja" id="btnAgregarHoja">+ Agregar otra hoja</button>
+                            <button type="button" class="btn-subir-escaneo" id="btnSubirEscaneo">Subir PDF</button>
+                        </div>
+                    </section>
 </div>
 
                 <p class="destino" id="destinoSubida" aria-live="polite"></p>
@@ -694,6 +722,8 @@
             estado.cargando = false;
             prepararFiltros();
             render();
+            // Al abrir el panel y tras cada subida/eliminación: la acción ya quedó auditada
+            actualizarNotificaciones();
         }
 
         /* ---------------- Carpetas (árbol armado a partir de la lista plana) ---------------- */
@@ -1489,6 +1519,90 @@
                 : '';
             $('auditPrev').disabled = r.pagina <= 1;
             $('auditNext').disabled = r.pagina >= r.totalPaginas;
+
+            // La primera página sin filtros muestra lo más reciente: todo eso ya cuenta como revisado
+            if (r.pagina === 1 && !auditoria.area && !auditoria.accion && filas.length) {
+                marcarNotificacionesVistas(idMasReciente(filas));
+            }
+        }
+
+        /* ------------------- Campana de notificaciones (auditoría, admin) ------------------- */
+
+        // Los IDs de auditoría son autoincrementales: "nuevo" = ID mayor que el último revisado
+        const CLAVE_ULTIMO_LOG = 'activa_ultimo_log_visto';
+        // Basta con los 10 más recientes: a partir de 10 el contador muestra "9+"
+        const LOGS_NOTIFICACIONES = 10;
+        // La consulta periódica la hace dashboard-sync.js (sincronizarDatosSilenciosamente)
+        const notificaciones = { ultimoId: 0, nuevas: 0, visto: null, consultando: false, pendiente: false, sinPermiso: false };
+
+        const idMasReciente = (logs) => logs.reduce((max, l) => Math.max(max, Number(l.id) || 0), 0);
+
+        function ultimoLogVisto() {
+            try {
+                const v = localStorage.getItem(CLAVE_ULTIMO_LOG);
+                if (v !== null) return Number(v) || 0;
+            } catch { /* almacenamiento bloqueado: se usa el valor en memoria */ }
+            return notificaciones.visto; // null = nunca se ha revisado en este navegador
+        }
+
+        function guardarUltimoLogVisto(id) {
+            notificaciones.visto = id;
+            try { localStorage.setItem(CLAVE_ULTIMO_LOG, String(id)); } catch { /* solo queda en memoria */ }
+        }
+
+        function pintarContador(n) {
+            const btn = $('btnAuditoria');
+            const badge = $('contadorNotificaciones');
+            const aumento = n > notificaciones.nuevas;
+            notificaciones.nuevas = n;
+
+            badge.hidden = n === 0;
+            badge.textContent = n > 9 ? '9+' : String(n);
+            btn.setAttribute('aria-label', n === 0
+                ? 'Auditoría y actividad reciente'
+                : `Auditoría y actividad reciente: ${n > 9 ? 'más de 9 acciones nuevas' : n === 1 ? '1 acción nueva' : `${n} acciones nuevas`}`);
+
+            // Campanazo solo cuando llegan acciones nuevas (no en cada consulta)
+            if (aumento) {
+                btn.classList.remove('is-sonando');
+                void btn.offsetWidth; // reinicia la animación
+                btn.classList.add('is-sonando');
+            }
+        }
+
+        async function actualizarNotificaciones() {
+            if (!esAdmin() || notificaciones.sinPermiso) return;
+            // Una consulta a la vez; si llega otra petición mientras tanto, se repite al terminar
+            if (notificaciones.consultando) { notificaciones.pendiente = true; return; }
+            notificaciones.consultando = true;
+            try {
+                const params = new URLSearchParams({ pagina: '1', limite: String(LOGS_NOTIFICACIONES) });
+                const res = await fetch(`${API_LOGS}?${params}`, { headers: authHeaders() });
+                if (res.status === 403) { notificaciones.sinPermiso = true; return; } // el servidor no lo reconoce como admin
+                if (!res.ok) return; // 401 incluido: la sincronización automática se detiene por su cuenta
+
+                const logs = (await res.json()).data || [];
+                notificaciones.ultimoId = Math.max(notificaciones.ultimoId, idMasReciente(logs));
+
+                let visto = ultimoLogVisto();
+                if (visto === null) {
+                    // Primera vez en este navegador: el historial existente no cuenta como nuevo
+                    guardarUltimoLogVisto(notificaciones.ultimoId);
+                    visto = notificaciones.ultimoId;
+                }
+                pintarContador(logs.filter(l => Number(l.id) > visto).length);
+            } catch (err) {
+                console.warn('No se pudo consultar la actividad reciente:', err);
+            } finally {
+                notificaciones.consultando = false;
+                if (notificaciones.pendiente) { notificaciones.pendiente = false; actualizarNotificaciones(); }
+            }
+        }
+
+        function marcarNotificacionesVistas(id = notificaciones.ultimoId) {
+            notificaciones.ultimoId = Math.max(notificaciones.ultimoId, id);
+            if (notificaciones.ultimoId > (ultimoLogVisto() ?? 0)) guardarUltimoLogVisto(notificaciones.ultimoId);
+            pintarContador(0);
         }
 
 
@@ -1744,7 +1858,10 @@
             $('btnCerrarSesion').addEventListener('click', cerrarSesion);
             $('btnSubirArchivo').addEventListener('click', abrirModal);
             $('btnSubirArchivo2').addEventListener('click', abrirModal);
-            $('btnAuditoria').addEventListener('click', abrirAuditoria);
+            $('btnAuditoria').addEventListener('click', () => {
+                marcarNotificacionesVistas(); // el contador se oculta al instante
+                abrirAuditoria();
+            });
 
             $('tabs').addEventListener('click', (e) => {
                 const b = e.target.closest('.tab'); if (!b) return;
@@ -1929,7 +2046,8 @@
             conectarEventos();
             prepararFiltros();
             textoDrop();
-            cargar();
+            // Polling silencioso (dashboard-sync.js) una vez terminada la carga inicial
+            cargar().then(iniciarActualizacionAutomatica);
         });
 
 
@@ -1938,8 +2056,21 @@
         const textoDropzone = document.getElementById('dropTexto');
         const selectDepartamento = document.getElementById('selectArea');
 
-        const FOTO_LADO_MAX_PX = 2480; // ≈ 210 ppp en A4: legible y liviano
+        // Cada foto se reduce a 1600 px en su lado mayor (≈ 140 ppp en A4: el texto se lee bien)
+        // y se guarda como JPEG al 82 %: una hoja pesa unos cientos de KB en vez de varios MB.
+        const LADO_MAX_PX = 1600;
+        const CALIDAD_JPEG = 0.82;
+        const MINIATURA_PX = 240; // miniaturas livianas: no se decodifican 1600 px por hoja
         const PDF_MARGEN_MM = 10;
+
+        // "Modo documento": equivale a CSS grayscale(100%) contrast(145%) brightness(112%).
+        // Blanquea el fondo del papel y oscurece el texto. Se calcula píxel a píxel (no con
+        // ctx.filter, que no existe en todas las versiones de Safari) para que el resultado sea
+        // igual en todos los celulares. La tabla precalcula contraste y brillo para cada gris.
+        const FILTRO_CONTRASTE = 1.45;
+        const FILTRO_BRILLO = 1.12;
+        const TABLA_DOCUMENTO = Uint8ClampedArray.from({ length: 256 },
+            (_, gris) => ((gris - 127.5) * FILTRO_CONTRASTE + 127.5) * FILTRO_BRILLO);
 
         /** Lee la foto con FileReader y la carga en un <img>. */
         function leerImagen(archivo) {
@@ -1956,55 +2087,104 @@
             });
         }
 
-        /**
-         * Convierte la foto en un PDF A4 con la imagen centrada y proporcional.
-         * Pasa por un canvas para respetar la rotación EXIF del celular (si no, las
-         * fotos verticales quedan acostadas en el PDF) y para reducir el peso.
-         */
-        async function fotoAPdf(foto, nombrePdf) {
-            const { jsPDF } = window.jspdf || {};
-            if (!jsPDF) throw new Error('No se pudo cargar jsPDF. Revisa tu conexión a internet.');
+        /** Aplica el "modo documento" a lo dibujado en el canvas: gris, contraste y brillo. */
+        function aplicarFiltroDocumento(ctx, ancho, alto) {
+            const imagen = ctx.getImageData(0, 0, ancho, alto);
+            const px = imagen.data; // RGBA
+            for (let i = 0; i < px.length; i += 4) {
+                // Gris con los pesos de luminancia de grayscale(); contraste y brillo, de la tabla
+                const gris = TABLA_DOCUMENTO[Math.round(0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2])];
+                px[i] = px[i + 1] = px[i + 2] = gris;
+            }
+            ctx.putImageData(imagen, 0, 0);
+        }
 
-            const img = await leerImagen(foto);
-            const escala = Math.min(1, FOTO_LADO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
-            const ancho = Math.round(img.naturalWidth * escala);
-            const alto = Math.round(img.naturalHeight * escala);
+        /**
+         * Prepara una foto como hoja del PDF en un canvas oculto (nunca se añade a la página):
+         * - La reduce proporcionalmente si supera LADO_MAX_PX de ancho o alto.
+         * - Con `aplicarFiltro`: "modo documento" (papel blanco, texto nítido).
+         *   Sin él (cédulas, sellos a color…): conserva los colores, solo optimiza tamaño y calidad.
+         * - La exporta como JPEG optimizado, más una miniatura de lo mismo para la vista previa.
+         * Dibujarla en el canvas también respeta la rotación EXIF del celular (si no, las fotos
+         * verticales quedarían acostadas en el PDF).
+         * Devuelve { dataUrl, miniatura, ancho, alto }.
+         */
+        async function procesarImagenDocumento(file, aplicarFiltro) {
+            const img = await leerImagen(file);
+            const escala = Math.min(1, LADO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
+            const ancho = Math.max(1, Math.round(img.naturalWidth * escala));
+            const alto = Math.max(1, Math.round(img.naturalHeight * escala));
 
             const canvas = document.createElement('canvas');
             canvas.width = ancho;
             canvas.height = alto;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: aplicarFiltro });
             ctx.fillStyle = '#fff'; // fondo blanco para PNG con transparencia
             ctx.fillRect(0, 0, ancho, alto);
             ctx.drawImage(img, 0, 0, ancho, alto);
-            const jpeg = canvas.toDataURL('image/jpeg', 0.85);
+            if (aplicarFiltro) aplicarFiltroDocumento(ctx, ancho, alto);
+            const dataUrl = canvas.toDataURL('image/jpeg', CALIDAD_JPEG);
 
-            const pdf = new jsPDF({ orientation: ancho > alto ? 'l' : 'p', unit: 'mm', format: 'a4' });
-            const paginaAncho = pdf.internal.pageSize.getWidth();
-            const paginaAlto = pdf.internal.pageSize.getHeight();
-            const factor = Math.min(
-                (paginaAncho - 2 * PDF_MARGEN_MM) / ancho,
-                (paginaAlto - 2 * PDF_MARGEN_MM) / alto
-            );
-            const w = ancho * factor;
-            const h = alto * factor;
-            pdf.addImage(jpeg, 'JPEG', (paginaAncho - w) / 2, (paginaAlto - h) / 2, w, h);
+            // Miniatura sacada del resultado: la vista previa muestra exactamente lo que irá al PDF
+            const reduccion = Math.min(1, MINIATURA_PX / Math.max(ancho, alto));
+            const mini = document.createElement('canvas');
+            mini.width = Math.max(1, Math.round(ancho * reduccion));
+            mini.height = Math.max(1, Math.round(alto * reduccion));
+            mini.getContext('2d').drawImage(canvas, 0, 0, mini.width, mini.height);
+            const miniatura = mini.toDataURL('image/jpeg', 0.7);
+
+            canvas.width = canvas.height = mini.width = mini.height = 0; // libera memoria: Safari en iOS la limita mucho
+            return { dataUrl, miniatura, ancho, alto };
+        }
+
+        /**
+         * Une las hojas ya procesadas en un solo PDF A4: una página por hoja, con la imagen
+         * centrada, proporcional y en la orientación que le corresponde (vertical u horizontal).
+         */
+        function hojasAPdf(hojas, nombrePdf) {
+            const { jsPDF } = window.jspdf || {};
+            if (!jsPDF) throw new Error('No se pudo cargar jsPDF. Revisa tu conexión a internet.');
+
+            let pdf = null;
+            for (const { dataUrl, ancho, alto } of hojas) {
+                // La primera hoja crea el documento; cada una de las siguientes, una página nueva.
+                const orientacion = ancho > alto ? 'l' : 'p';
+                if (!pdf) pdf = new jsPDF({ orientation: orientacion, unit: 'mm', format: 'a4' });
+                else pdf.addPage('a4', orientacion);
+
+                const paginaAncho = pdf.internal.pageSize.getWidth();
+                const paginaAlto = pdf.internal.pageSize.getHeight();
+                const factor = Math.min(
+                    (paginaAncho - 2 * PDF_MARGEN_MM) / ancho,
+                    (paginaAlto - 2 * PDF_MARGEN_MM) / alto
+                );
+                const w = ancho * factor;
+                const h = alto * factor;
+                pdf.addImage(dataUrl, 'JPEG', (paginaAncho - w) / 2, (paginaAlto - h) / 2, w, h);
+            }
 
             return new File([pdf.output('blob')], nombrePdf, { type: 'application/pdf' });
         }
 
+        /** PDF ya escaneado. Algunas apps de Android lo entregan sin tipo MIME: se mira la extensión. */
+        const esPdf = (archivo) => archivo.type === 'application/pdf'
+            || (!archivo.type && /\.pdf$/i.test(archivo.name));
+
         /**
-         * Pregunta el nombre del documento. Si se deja vacío o se cancela, genera uno
-         * automático: Documento_<Área>_<dd-mm-aaaa>.pdf
+         * Pregunta el nombre del documento, con `sugerido` como valor inicial (el nombre del
+         * PDF elegido; vacío para una foto). Si se deja vacío o se cancela, usa `sugerido`
+         * o, si no hay, genera uno automático: Documento_<Área>_<dd-mm-aaaa>.pdf
          */
-        function pedirNombrePdf(departamento) {
-            const escrito = (prompt('¿Qué nombre deseas darle a este documento?') || '')
+        function pedirNombrePdf(departamento, sugerido = '') {
+            const limpiar = (texto) => texto
                 .replace(/[\\/:*?"<>|]/g, '') // caracteres no válidos en nombres de archivo
                 .replace(/\s+/g, ' ')         // espacios repetidos → uno solo
                 .trim()
                 .replace(/\.pdf$/i, '')       // por si escribe "Factura.pdf"
                 .slice(0, 120)
                 .trim();
+            const propuesto = limpiar(sugerido);
+            const escrito = limpiar(prompt('¿Qué nombre deseas darle a este documento?', propuesto) || '') || propuesto;
             if (escrito) return `${escrito}.pdf`;
 
             const hoy = new Date();
@@ -2022,29 +2202,119 @@
             textoDrop();            // texto inicial del dropzone
         }
 
-        inputCamara.addEventListener('change', async () => {
-            const foto = inputCamara.files[0];
-            if (!foto) return;
+        /* ---------- Escaneo de varias hojas: cola de fotos → un solo PDF ---------- */
 
-            // 1. El área es obligatoria
-            const departamento = selectDepartamento.value.trim();
-            if (!departamento) {
-                alert('Selecciona el área (departamento) antes de tomar la foto.');
-                inputCamara.value = '';
-                return;
+        // Hojas de la sesión de escaneo actual, en orden. Cada foto se procesa una sola vez por modo
+        // y se guarda: { archivo: File, versiones: { documento?, color? } } (ver procesarImagenDocumento)
+        let paginasEscaneadas = [];
+        let escaneoBloqueado = false; // procesando fotos o generando/subiendo el PDF
+        let procesandoHojas = false;  // muestra el panel aunque la primera hoja aún no esté lista
+
+        const plural = (n, palabra) => `${n} ${palabra}${n === 1 ? '' : 's'}`;
+        const claveModo = (documento) => (documento ? 'documento' : 'color');
+        const modoDocumento = () => $('modoDocumento').checked;
+
+        function pintarEscaneo() {
+            const n = paginasEscaneadas.length;
+            const clave = claveModo(modoDocumento());
+            $('escaneo').hidden = n === 0 && !procesandoHojas;
+            $('escaneoTitulo').textContent = n ? `Documento escaneado · ${plural(n, 'hoja')}` : 'Documento escaneado';
+            $('escaneoHojas').innerHTML = paginasEscaneadas.map((p, i) => {
+                // Versión del modo elegido (siempre lista salvo si falló un cambio de modo)
+                const version = p.versiones[clave] || p.versiones.documento || p.versiones.color;
+                return `
+                <li class="hoja">
+                    <img class="hoja-img" src="${version.miniatura}" alt="Hoja ${i + 1}">
+                    <span class="hoja-num">Hoja ${i + 1}</span>
+                    <button type="button" class="hoja-quitar" data-quitar-hoja="${i}" title="Quitar hoja" aria-label="Quitar hoja ${i + 1}"${escaneoBloqueado ? ' disabled' : ''}>×</button>
+                </li>`;
+            }).join('');
+            $('btnSubirEscaneo').textContent = `Subir PDF (${plural(n, 'hoja')})`;
+        }
+
+        function estadoEscaneo(texto) {
+            $('escaneoEstado').textContent = texto;
+            $('escaneoEstado').hidden = !texto;
+        }
+
+        /**
+         * Procesa en el modo indicado las hojas que aún no tienen esa versión (las demás ya están
+         * guardadas). Mientras tanto bloquea el escáner y el modal, y muestra el avance.
+         */
+        async function prepararHojas(paginas, documento, texto) {
+            const clave = claveModo(documento);
+            const pendientes = paginas.filter(p => !p.versiones[clave]);
+            if (!pendientes.length) return;
+
+            procesandoHojas = true;
+            bloquearEscaneo(true);
+            pintarEscaneo();
+            try {
+                for (const [i, p] of pendientes.entries()) {
+                    estadoEscaneo(pendientes.length > 1 ? `${texto} ${i + 1}/${pendientes.length}` : texto);
+                    p.versiones[clave] = await procesarImagenDocumento(p.archivo, documento);
+                }
+            } finally {
+                procesandoHojas = false;
+                estadoEscaneo('');
+                bloquearEscaneo(false);
             }
+        }
 
-            // 2. Nombre del documento (antes de convertir)
-            const nombrePdf = pedirNombrePdf(departamento);
+        /** Procesa la foto en el modo actual y la añade como hoja nueva. */
+        async function agregarHoja(foto) {
+            const pagina = { archivo: foto, versiones: {} };
+            try {
+                await prepararHojas([pagina], modoDocumento(), `Procesando hoja ${paginasEscaneadas.length + 1}…`);
+                paginasEscaneadas.push(pagina);
+            } catch (err) {
+                console.error('Error al procesar la foto:', err);
+                alert(`No se pudo procesar la foto: ${err.message}`);
+            }
+            pintarEscaneo();
+        }
 
-            inputCamara.disabled = true; // evita otra foto mientras se procesa esta
+        function quitarHoja(indice) {
+            paginasEscaneadas.splice(indice, 1);
+            pintarEscaneo();
+        }
+
+        /** Descarta las hojas pendientes y oculta la vista previa. */
+        function limpiarEscaneo() {
+            paginasEscaneadas = [];
+            pintarEscaneo();
+        }
+
+        /** Mientras se procesan fotos o se genera/sube el PDF: ni hojas nuevas, ni quitar, ni cerrar el modal. */
+        function bloquearEscaneo(activo) {
+            escaneoBloqueado = activo;
+            bloquearSubida(activo); // Cancelar, × y Subir del modal (cerrarModal no cierra a media tarea)
+            inputCamara.disabled = activo;
+            $('modoDocumento').disabled = activo;
+            $('btnAgregarHoja').disabled = activo;
+            $('btnSubirEscaneo').disabled = activo;
+            $('escaneoHojas').querySelectorAll('.hoja-quitar').forEach(b => { b.disabled = activo; });
+        }
+
+        /** El área es obligatoria. */
+        function areaEscaneo() {
+            const departamento = selectDepartamento.value.trim();
+            if (!departamento) alert('Selecciona el área (departamento) antes de subir el documento.');
+            return departamento;
+        }
+
+        /**
+         * Obtiene el PDF con `generarPdf()` y lo sube a /documents/upload (la misma petición
+         * de siempre). Si sale bien, limpia la vista previa y a los 2 s cierra y limpia el
+         * modal y refresca la tabla. Si falla, las hojas se conservan para reintentar.
+         */
+        async function enviarEscaneo(departamento, generarPdf) {
+            bloquearEscaneo(true);
             let exito = false;
             try {
-                // 3. Foto → PDF en memoria
-                textoDropzone.innerHTML = `⏳ Convirtiendo a PDF...<br><b>${esc(nombrePdf)}</b>`;
-                const pdf = await fotoAPdf(foto, nombrePdf);
+                const pdf = await generarPdf();
 
-                // 4. Datos a enviar
+                // Datos a enviar
                 const formData = new FormData();
                 formData.append('file', pdf);
                 formData.append('departamento', departamento);
@@ -2052,8 +2322,9 @@
                     formData.append('carpetaId', String(estado.carpeta)); // carpeta abierta
                 }
 
-                // 5. Subida a la ruta relativa (mismo servidor que sirve el panel)
+                // Subida a la ruta relativa (mismo servidor que sirve el panel)
                 textoDropzone.innerHTML = `⏳ Subiendo PDF...<br><b>${esc(pdf.name)}</b>`;
+                $('btnSubirEscaneo').textContent = 'Subiendo…';
                 const response = await fetch('/documents/upload', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
@@ -2062,11 +2333,12 @@
 
                 if (response.ok) {
                     exito = true;
+                    limpiarEscaneo();
                     textoDropzone.innerHTML = `✅ ¡PDF subido con éxito!<br><b>${esc(pdf.name)}</b>`;
-                    // 6. A los 2 s: cerrar el modal, limpiarlo y refrescar la tabla de fondo
+                    // A los 2 s: cerrar el modal, limpiarlo y refrescar la tabla de fondo
                     setTimeout(() => {
+                        bloquearEscaneo(false);
                         cerrarYLimpiarModalSubida();
-                        inputCamara.disabled = false;
                         cargar();
                     }, 2000);
                 } else {
@@ -2075,19 +2347,112 @@
                         ? error.message.join(', ')
                         : (error.message || `Error ${response.status}`);
                     textoDropzone.innerHTML = `❌ Error al subir: ${esc(mensaje)}`;
+                    aviso(`Error al subir: ${mensaje}`); // visible aunque el mensaje de arriba quede fuera de pantalla
                 }
             } catch (error) {
-                console.error('Error al procesar la foto:', error);
-                textoDropzone.innerHTML = error instanceof TypeError
-                    ? '❌ Error de conexión con el servidor.'
-                    : `❌ ${esc(error.message)}`;
+                console.error('Error al procesar el escaneo:', error);
+                const mensaje = error instanceof TypeError ? 'Error de conexión con el servidor.' : error.message;
+                textoDropzone.innerHTML = `❌ ${esc(mensaje)}`;
+                aviso(mensaje);
             } finally {
-                // Limpiar el input para poder tomar otra foto. Si se subió bien, la cámara
-                // sigue bloqueada hasta que el modal se cierre (así no se cierra a media subida).
-                inputCamara.value = '';
-                if (!exito) inputCamara.disabled = false;
+                if (!exito) {
+                    bloquearEscaneo(false);
+                    pintarEscaneo(); // restaura "Subir PDF (N hojas)"
+                }
             }
+        }
+
+        /**
+         * "Subir PDF (N hojas)": une las hojas, una por página, en la versión del modo elegido
+         * (ya procesadas al tomarlas o al cambiar de modo) y sube el PDF.
+         */
+        async function subirHojas() {
+            if (!paginasEscaneadas.length) return;
+            if (subiendo) { aviso('Espera a que termine la subida en curso.'); return; }
+            const departamento = areaEscaneo();
+            if (!departamento) return;
+
+            const nombrePdf = pedirNombrePdf(departamento);
+            const clave = claveModo(modoDocumento());
+            const hojas = paginasEscaneadas.map(p => p.versiones[clave]);
+
+            await enviarEscaneo(departamento, async () => {
+                textoDropzone.innerHTML = `⏳ Convirtiendo a PDF...<br><b>${esc(nombrePdf)}</b>`;
+                $('btnSubirEscaneo').textContent = 'Generando PDF…';
+                const pdf = hojasAPdf(hojas, nombrePdf);
+                if (pdf.size > TAMANO_MAX_MB * 1024 * 1024) {
+                    throw new Error(`El PDF pesa ${(pdf.size / 1048576).toFixed(1)} MB y el máximo es ${TAMANO_MAX_MB} MB. Quita algunas hojas o súbelo en dos partes.`);
+                }
+                return pdf;
+            });
+        }
+
+        inputCamara.addEventListener('change', async () => {
+            const archivo = inputCamara.files[0];
+            inputCamara.value = ''; // limpia el input: permite tomar otra foto o elegir el mismo archivo
+            if (!archivo) return;
+            // Otra subida del modal en curso (la del escáner deshabilita el input mientras dura)
+            if (subiendo) { aviso('Espera a que termine la subida en curso.'); return; }
+
+            // PDF ya escaneado (CamScanner, Adobe Scan, Archivos…): se sube directamente
+            if (esPdf(archivo)) {
+                const pendientes = paginasEscaneadas.length;
+                if (pendientes) {
+                    alert(`Tienes ${pendientes === 1 ? '1 hoja escaneada' : `${pendientes} hojas escaneadas`} sin subir. Súbelas o quítalas antes de elegir un PDF.`);
+                    return;
+                }
+                if (archivo.size > TAMANO_MAX_MB * 1024 * 1024) {
+                    alert(`El PDF pesa ${(archivo.size / 1048576).toFixed(1)} MB y el máximo es ${TAMANO_MAX_MB} MB.`);
+                    return;
+                }
+                const departamento = areaEscaneo();
+                if (!departamento) return;
+                const nombrePdf = pedirNombrePdf(departamento, archivo.name); // propone su propio nombre
+                await enviarEscaneo(departamento, async () =>
+                    new File([archivo], nombrePdf, { type: 'application/pdf' }));
+                return;
+            }
+
+            // Foto: NO se sube todavía; se procesa, se agrega como hoja y se muestra en la vista previa
+            if (archivo.type.startsWith('image/')) {
+                await agregarHoja(archivo);
+                return;
+            }
+
+            // Video, audio u otro formato
+            alert('Formato no válido. Toma una foto del documento o elige un archivo PDF.');
         });
+
+        $('btnAgregarHoja').addEventListener('click', () => inputCamara.click());
+        $('btnSubirEscaneo').addEventListener('click', subirHojas);
+        $('escaneoHojas').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-quitar-hoja]');
+            if (btn) quitarHoja(+btn.dataset.quitarHoja);
+        });
+
+        // Modo documento ↔ color: procesa solo las hojas a las que les falta esa versión
+        // (volver al modo anterior es inmediato) y actualiza las miniaturas.
+        $('modoDocumento').addEventListener('change', async (e) => {
+            const documento = e.target.checked;
+            if (subiendo) {
+                e.target.checked = !documento;
+                aviso('Espera a que termine la subida en curso.');
+                return;
+            }
+            try {
+                await prepararHojas(paginasEscaneadas, documento, documento ? 'Aplicando modo documento…' : 'Recuperando colores…');
+            } catch (err) {
+                e.target.checked = !documento; // vuelve al modo anterior: sus versiones ya están listas
+                console.error('Error al cambiar el modo de escaneo:', err);
+                alert(`No se pudo cambiar el modo: ${err.message}`);
+            }
+            pintarEscaneo();
+        });
+
+        // Al cerrar el modal (Cancelar, ×, tras subir…) se descartan las hojas pendientes.
+        // El interruptor vuelve a "Modo documento" con el reset() del formulario al abrirlo.
+        modal.addEventListener('close', limpiarEscaneo);
     </script>
+    <script src="dashboard-sync.js"></script>
 </body>
 </html>
