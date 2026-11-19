@@ -466,6 +466,28 @@
         </div>
     </dialog>
 
+    <!-- Vista previa de documentos (PDF e imágenes). Lógica en dashboard-visor.js -->
+    <dialog id="modalVistaPrevia" class="dialog-visor" aria-labelledby="visorTitulo">
+        <div class="visor-head">
+            <div class="visor-titulo">
+                <span class="file-ico" id="visorTipo" aria-hidden="true"></span>
+                <h2 id="visorTitulo">Vista previa</h2>
+            </div>
+            <div class="visor-acciones">
+                <a class="btn-visor" id="btnVisorPestana" target="_blank" rel="noopener" aria-disabled="true" title="Abrir en una pestaña nueva" aria-label="Abrir en una pestaña nueva">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+                    <span class="btn-visor-txt">Abrir en pestaña</span>
+                </a>
+                <button type="button" class="btn-visor is-primary" id="btnVisorDescargar" title="Descargar documento" aria-label="Descargar documento">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+                    <span class="btn-visor-txt">Descargar</span>
+                </button>
+                <button type="button" class="modal-close" id="btnCerrarVisor" aria-label="Cerrar vista previa">×</button>
+            </div>
+        </div>
+        <div class="visor-cuerpo" id="contenedorVisor"></div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite" popover="manual"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -625,7 +647,7 @@
             });
         }
 
-        const ICO_DESCARGAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>';
+        const ICO_VER = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
         const ICO_ELIMINAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
         const RUTA_CARPETA = '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>';
         const ICO_CARPETA = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUTA_CARPETA}</svg>`;
@@ -996,14 +1018,16 @@
                     ? `<span class="meta-area">${ICO_EDIFICIO_XS}<span class="sr-only">Área </span>${esc(d.departamento)}</span>` : '';
                 const meta = metaPor || metaArea ? `<span class="file-meta"><span class="file-meta-in">${metaPor}${metaArea}</span></span>` : '';
 
-                const accionDescargar = `<button type="button" class="action-link" data-descargar="${d.id}" data-nombre="${esc(d.nombre)}" title="Descargar" aria-label="Descargar ${esc(d.nombre)}">${ICO_DESCARGAR}<span class="act-txt">Descargar</span></button>`;
+                // Vista previa dentro del panel (la abre dashboard-visor.js). La descarga
+                // está centralizada en el botón "Descargar" de ese modal.
+                const accionVer = `<button type="button" class="action-link" data-ver="${d.id}" data-nombre="${esc(d.nombre)}" title="Visualizar documento" aria-label="Visualizar ${esc(d.nombre)}">${ICO_VER}<span class="act-txt">Ver</span></button>`;
 
                 // El botón Eliminar solo se dibuja si el usuario es Administrador
                 const accionEliminar = admin
                     ? `<button type="button" class="action-link is-danger" data-eliminar="${d.id}" title="Eliminar" aria-label="Eliminar ${esc(d.nombre)}">${ICO_ELIMINAR}<span class="act-txt">Eliminar</span></button>`
                     : '';
 
-                const accion = `<div class="actions">${accionDescargar}${accionEliminar}</div>`;
+                const accion = `<div class="actions">${accionVer}${accionEliminar}</div>`;
                 return `
                 <tr>
                     <td><div class="file-cell"><span class="file-ico ${t.clase}" aria-hidden="true">${esc(t.ext)}</span><span class="file-text"><span class="file-name">${resaltar(d.nombre, estado.q)}</span>${meta}${ubicacion ? `<span class="file-path">${ICO_CARPETA_SM}${esc(ubicacion)}</span>` : ''}</span></div></td>
@@ -1930,12 +1954,6 @@
                     return;
                 }
 
-                const btnDescargar = e.target.closest('[data-descargar]');
-                if (btnDescargar) {
-                    descargarDocumento(btnDescargar.dataset.descargar, btnDescargar.dataset.nombre);
-                    return;
-                }
-
                 const btnAbrirCarpeta = e.target.closest('[data-abrir-carpeta]');
                 if (btnAbrirCarpeta) { irACarpeta(+btnAbrirCarpeta.dataset.abrirCarpeta); return; }
 
@@ -2454,5 +2472,6 @@
         modal.addEventListener('close', limpiarEscaneo);
     </script>
     <script src="dashboard-sync.js"></script>
+    <script src="dashboard-visor.js"></script>
 </body>
 </html>
