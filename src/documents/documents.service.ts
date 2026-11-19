@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { extname } from 'node:path';
 import { Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { departamentoParaLectura, puedeAcceder, type UsuarioSesion } from '../auth/usuario-sesion';
@@ -18,9 +19,36 @@ import { Documento } from './documento.entity';
 import type { SubirCarpetaDto } from './dto/subir-carpeta.dto';
 import type { SubirDocumentoDto } from './dto/subir-documento.dto';
 import { parsearRutas, type RutaRelativa } from './rutas-relativas';
-import { LONGITUD_MAXIMA_NOMBRE_ARCHIVO, motivoRechazoArchivo } from './upload.config';
+import {
+  LONGITUD_MAXIMA_NOMBRE_ARCHIVO,
+  motivoRechazoArchivo,
+  tipoDeVisor,
+  tipoMimeDeArchivo,
+  type TipoVisor,
+} from './upload.config';
 
 export type { ArchivoDescargable };
+
+/** Respuesta de GET /documents/:id/vista-previa. */
+export interface VistaPreviaDocumento {
+  id: number;
+  nombre: string;
+  /** Tipo MIME según la extensión (p. ej. "application/pdf", "image/png"). */
+  mimeType: string;
+  /** Extensión en minúsculas y sin punto ("pdf", "docx"...). */
+  extension: string;
+  /** Cómo se muestra en el panel (`null` = sin vista previa, solo descarga). */
+  visor: TipoVisor | null;
+  /** `true` si hay visor para el formato (equivale a `visor !== null`). */
+  previsualizable: boolean;
+  /**
+   * URL para mostrar el archivo (`null` si no es previsualizable):
+   * - URL firmada de Backblaze B2 en modo `inline` (caduca, ver VIGENCIA_URL_FIRMADA_S), o
+   * - en el respaldo local, la ruta de descarga del backend (necesita el JWT → `requiereToken`).
+   */
+  url: string | null;
+  requiereToken: boolean;
+}
 
 /** Fecha efectiva: la asignada por el usuario o, si no tiene, la de registro en el servidor. */
 const FECHA_EFECTIVA = 'COALESCE(doc.fecha, doc.fechaSubida)';
@@ -344,6 +372,34 @@ export class DocumentsService {
   async obtenerArchivo(id: number, usuario: UsuarioSesion): Promise<ArchivoDescargable> {
     const doc = await this.findOne(id, usuario);
     return this.almacenamiento.obtener(doc);
+  }
+
+  /**
+   * GET /documents/:id/vista-previa. Misma regla de acceso que la descarga (404 si es de
+   * otra área). Para los formatos con visor (PDF, imágenes, Office, CSV/TXT) guardados en
+   * B2 devuelve una URL firmada `inline`; en el respaldo local, la ruta de descarga (que
+   * el panel pide con el token JWT).
+   */
+  async vistaPrevia(id: number, usuario: UsuarioSesion): Promise<VistaPreviaDocumento> {
+    const doc = await this.findOne(id, usuario);
+    const mimeType = tipoMimeDeArchivo(doc.nombreOriginal);
+    const visor = tipoDeVisor(doc.nombreOriginal);
+    const base = {
+      id: doc.id,
+      nombre: doc.nombreOriginal,
+      mimeType,
+      extension: extname(doc.nombreOriginal).slice(1).toLowerCase(),
+      visor,
+      previsualizable: visor !== null,
+    };
+    if (!visor) return { ...base, url: null, requiereToken: false };
+
+    // CSV/TXT como texto plano: con "text/csv" los navegadores lo descargarían en vez de mostrarlo.
+    const tipoMime = visor === 'texto' ? 'text/plain; charset=utf-8' : mimeType;
+    const firmada = await this.almacenamiento.urlFirmada(doc, { inline: true, tipoMime });
+    return firmada
+      ? { ...base, url: firmada, requiereToken: false }
+      : { ...base, url: `/documents/${doc.id}/download`, requiereToken: true };
   }
 
   /* ----------------------------- Borrado ----------------------------- */

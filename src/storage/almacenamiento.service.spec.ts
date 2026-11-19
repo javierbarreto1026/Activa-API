@@ -8,7 +8,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { AlmacenamientoService } from './almacenamiento.service';
+import { AlmacenamientoService, VIGENCIA_URL_FIRMADA_S } from './almacenamiento.service';
 import { cargarConfigB2 } from './b2.config';
 
 const ENV_B2: Record<string, string> = {
@@ -77,6 +77,46 @@ describe('AlmacenamientoService (Backblaze B2)', () => {
     expect((comandos[2].input as { CopySource: string }).CopySource).toBe(
       'bucket-prueba/area/a.pdf',
     );
+  });
+
+  it('firma URLs inline (con Content-Type) para la vista previa y attachment para descargar', async () => {
+    const servicio = new AlmacenamientoService(configMock(ENV_B2));
+    const archivo = {
+      ruta: 'https://s3.us-east-005.backblazeb2.com/bucket-prueba/area/a.pdf',
+      nombreGuardado: 'area/a.pdf',
+      nombreOriginal: 'Informe año.pdf',
+    };
+
+    const ver = new URL(
+      (await servicio.urlFirmada(archivo, { inline: true, tipoMime: 'application/pdf' }))!,
+    );
+    // El SDK puede firmar en estilo virtual-hosted (bucket en el host) o path (bucket en la ruta).
+    expect(ver.hostname).toMatch(/s3\.us-east-005\.backblazeb2\.com$/);
+    expect(ver.host + ver.pathname).toContain('bucket-prueba');
+    expect(ver.pathname).toMatch(/\/area\/a\.pdf$/);
+    expect(ver.searchParams.get('response-content-disposition')).toBe(
+      "inline; filename*=UTF-8''Informe%20a%C3%B1o.pdf",
+    );
+    expect(ver.searchParams.get('response-content-type')).toBe('application/pdf');
+    expect(ver.searchParams.get('X-Amz-Expires')).toBe(String(VIGENCIA_URL_FIRMADA_S));
+    expect(ver.searchParams.get('X-Amz-Signature')).toBeTruthy();
+
+    const descargar = new URL((await servicio.urlFirmada(archivo))!);
+    expect(descargar.searchParams.get('response-content-disposition')).toMatch(/^attachment; /);
+    expect(descargar.searchParams.has('response-content-type')).toBe(false);
+
+    // Firmar es local: no se hace ninguna petición a B2.
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('no firma URLs para archivos del respaldo local', async () => {
+    const servicio = new AlmacenamientoService(configMock({}));
+    await expect(
+      servicio.urlFirmada(
+        { ruta: '/uploads/a.pdf', nombreGuardado: 'a.pdf', nombreOriginal: 'a.pdf' },
+        { inline: true },
+      ),
+    ).resolves.toBeNull();
   });
 
   it('sin variables de B2 usa el respaldo local', () => {

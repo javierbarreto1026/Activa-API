@@ -54,6 +54,38 @@ const TIPOS_PERMITIDOS: Record<string, string[]> = {
 
 export const EXTENSIONES_PERMITIDAS = Object.keys(TIPOS_PERMITIDOS);
 
+/**
+ * Visor con el que el panel muestra cada formato sin descargarlo:
+ * - pdf / imagen / texto: el propio navegador (iframe o <img>).
+ * - office: el visor de Microsoft Office Online, que lee la URL firmada de B2.
+ */
+export type TipoVisor = 'pdf' | 'imagen' | 'office' | 'texto';
+
+const VISOR_POR_EXTENSION: Record<string, TipoVisor> = {
+  '.pdf': 'pdf',
+  '.jpg': 'imagen',
+  '.jpeg': 'imagen',
+  '.png': 'imagen',
+  '.webp': 'imagen',
+  '.doc': 'office',
+  '.docx': 'office',
+  '.xls': 'office',
+  '.xlsx': 'office',
+  '.ppt': 'office',
+  '.pptx': 'office',
+  '.csv': 'texto',
+};
+
+/** Tipo MIME canónico según la extensión del nombre ("application/octet-stream" si no se reconoce). */
+export function tipoMimeDeArchivo(nombre: string): string {
+  return TIPOS_PERMITIDOS[extname(nombre).toLowerCase()]?.[0] ?? 'application/octet-stream';
+}
+
+/** Visor para el archivo según su extensión (`null` = sin vista previa). */
+export function tipoDeVisor(nombre: string): TipoVisor | null {
+  return VISOR_POR_EXTENSION[extname(nombre).toLowerCase()] ?? null;
+}
+
 const mensajeTipoNoPermitido = () =>
   `Tipo de archivo no permitido. Formatos aceptados: ${EXTENSIONES_PERMITIDAS.join(', ')}`;
 

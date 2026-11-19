@@ -121,6 +121,13 @@ export class DocumentsController {
     return this.documentsService.findOne(id, usuario);
   }
 
+  // GET /documents/1/vista-previa → { url, nombre, mimeType, extension, visor, previsualizable, requiereToken }
+  // URL firmada "inline" de B2 para ver PDF, imágenes, Office y CSV en el panel (misma regla de área).
+  @Get(':id/vista-previa')
+  vistaPrevia(@Param('id', ParseIntPipe) id: number, @UsuarioActual() usuario: UsuarioSesion) {
+    return this.documentsService.vistaPrevia(id, usuario);
+  }
+
   @Get(':id/download')
   async download(
     @Param('id', ParseIntPipe) id: number,

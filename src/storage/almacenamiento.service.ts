@@ -12,6 +12,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'node:fs';
 import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
@@ -43,6 +44,19 @@ export interface ArchivoAlmacenado {
 }
 
 export type ArchivoEnMemoria = Pick<Express.Multer.File, 'buffer' | 'mimetype' | 'size'>;
+
+export interface OpcionesUrlFirmada {
+  /** `true` = mostrar en el navegador; `false` (por defecto) = descargar. */
+  inline?: boolean;
+  /** Content-Type con el que B2 debe responder (p. ej. "application/pdf"). */
+  tipoMime?: string;
+}
+
+/**
+ * Vigencia de las URLs firmadas. El visor de PDF del navegador pide el archivo por
+ * partes (Range) mientras se lee, así que la URL debe durar más que la carga inicial.
+ */
+export const VIGENCIA_URL_FIRMADA_S = 15 * 60;
 
 /** Carpeta del respaldo local (cuando Backblaze B2 no está configurado). */
 const CARPETA_LOCAL = 'uploads';
@@ -217,6 +231,37 @@ export class AlmacenamientoService {
         err as Error,
       );
       throw new InternalServerErrorException('No se pudo obtener el archivo.');
+    }
+  }
+
+  /**
+   * URL firmada (temporal) para leer el objeto directamente de Backblaze B2, sin pasar
+   * por el backend. Devuelve `null` si el archivo está en el respaldo local: ahí no hay
+   * nada que firmar y el contenido se sirve con GET /documents/:id/download.
+   *
+   * - `inline: true` → el navegador lo muestra (visor de PDF, imagen). `tipoMime` fija el
+   *   Content-Type de la respuesta para que no lo trate como binario.
+   * - `inline: false` → descarga con el nombre original.
+   */
+  async urlFirmada(
+    archivo: ArchivoAlmacenado & { nombreOriginal: string },
+    { inline = false, tipoMime }: OpcionesUrlFirmada = {},
+  ): Promise<string | null> {
+    if (!estaEnB2(archivo)) return null;
+
+    const { config, cliente } = this.obtenerB2();
+    const nombre = encodeURIComponent(archivo.nombreOriginal);
+    const comando = new GetObjectCommand({
+      Bucket: config.bucket,
+      Key: archivo.nombreGuardado,
+      ResponseContentDisposition: `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${nombre}`,
+      ...(tipoMime ? { ResponseContentType: tipoMime } : {}),
+    });
+    try {
+      return await getSignedUrl(cliente, comando, { expiresIn: VIGENCIA_URL_FIRMADA_S });
+    } catch (err) {
+      this.logger.error(`Error firmando la URL de "${archivo.nombreGuardado}"`, err as Error);
+      throw new InternalServerErrorException('No se pudo preparar el archivo.');
     }
   }
 
