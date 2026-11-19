@@ -96,6 +96,7 @@ button { cursor: pointer; }
 
 .badge-notificaciones {
     position: absolute; top: 2px; right: 2px;
+    display: inline-flex; align-items: center; justify-content: center;
     min-width: 18px; padding: 1px 5px;
     background: #c8102e; color: #ffffff;
     border: 2px solid var(--ink); /* mismo negro del header: recorta el badge sobre la campana */

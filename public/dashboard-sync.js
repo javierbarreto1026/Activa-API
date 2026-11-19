@@ -8,7 +8,7 @@
 
    Depende de lo que define el <script> principal de dashboard.html (que se
    carga antes): estado, render, normalizarDoc, normalizarCarpeta, carpetaPorId,
-   authHeaders, actualizarNotificaciones, API_DOCUMENTOS, API_CARPETAS y $.
+   authHeaders, window.actualizarContadorNotificaciones, API_DOCUMENTOS, API_CARPETAS y $.
    ========================================================================== */
 
 const INTERVALO_SINCRONIZACION_MS = 10000;
@@ -41,10 +41,22 @@ async function sincronizarDatosSilenciosamente() {
 
     estaSincronizando = true;
     try {
-        // actualizarNotificaciones() ya ignora a quien no es administrador
-        await Promise.all([sincronizarDocumentos(), actualizarNotificaciones()]);
+        // Documentos y campana en paralelo; un fallo en una no bloquea a la otra
+        await Promise.allSettled([sincronizarDocumentos(), sincronizarNotificaciones()]);
     } finally {
         estaSincronizando = false;
+    }
+}
+
+/** Campana de auditoría: solo si el usuario es administrador (botón visible). */
+async function sincronizarNotificaciones() {
+    const campana = document.getElementById('btnAuditoria');
+    if (!campana || campana.hidden) return;
+    if (typeof window.actualizarContadorNotificaciones !== 'function') return;
+    try {
+        await window.actualizarContadorNotificaciones();
+    } catch (err) {
+        console.warn('No se pudo actualizar el contador de notificaciones (se reintentará):', err);
     }
 }
 

@@ -35,7 +35,7 @@
 
             <div class="nav-right">
                 <div class="nav-links">
-                    <button type="button" class="nav-link" id="btnSubirArchivo">Subir archivo</button>
+                    <button type="button" class="nav-link" id="btnSubirArchivo" hidden>Subir archivo</button>
 
                     <button type="button" class="nav-link" id="btnGestionAdmin" hidden>Gestión de Usuarios</button>
 
@@ -1557,7 +1557,7 @@
         // Basta con los 10 más recientes: a partir de 10 el contador muestra "9+"
         const LOGS_NOTIFICACIONES = 10;
         // La consulta periódica la hace dashboard-sync.js (sincronizarDatosSilenciosamente)
-        const notificaciones = { ultimoId: 0, nuevas: 0, visto: null, consultando: false, pendiente: false, sinPermiso: false };
+        const notificaciones = { ultimoId: 0, nuevas: 0, visto: null, consultando: false, pendiente: false };
 
         const idMasReciente = (logs) => logs.reduce((max, l) => Math.max(max, Number(l.id) || 0), 0);
 
@@ -1580,8 +1580,10 @@
             const aumento = n > notificaciones.nuevas;
             notificaciones.nuevas = n;
 
-            badge.hidden = n === 0;
             badge.textContent = n > 9 ? '9+' : String(n);
+            // Atributo y estilo en línea: ningún CSS puede dejarlo oculto (ni visible) por error
+            badge.hidden = n === 0;
+            badge.style.display = n === 0 ? 'none' : 'inline-flex';
             btn.setAttribute('aria-label', n === 0
                 ? 'Auditoría y actividad reciente'
                 : `Auditoría y actividad reciente: ${n > 9 ? 'más de 9 acciones nuevas' : n === 1 ? '1 acción nueva' : `${n} acciones nuevas`}`);
@@ -1595,26 +1597,32 @@
         }
 
         async function actualizarNotificaciones() {
-            if (!esAdmin() || notificaciones.sinPermiso) return;
+            if (!esAdmin()) return;
             // Una consulta a la vez; si llega otra petición mientras tanto, se repite al terminar
             if (notificaciones.consultando) { notificaciones.pendiente = true; return; }
             notificaciones.consultando = true;
             try {
                 const params = new URLSearchParams({ pagina: '1', limite: String(LOGS_NOTIFICACIONES) });
-                const res = await fetch(`${API_LOGS}?${params}`, { headers: authHeaders() });
-                if (res.status === 403) { notificaciones.sinPermiso = true; return; } // el servidor no lo reconoce como admin
-                if (!res.ok) return; // 401 incluido: la sincronización automática se detiene por su cuenta
+                // no-store: cada ciclo debe ver los registros recién creados desde otro dispositivo
+                const res = await fetch(`${API_LOGS}?${params}`, { headers: authHeaders(), cache: 'no-store' });
+                // 403 puntual (o 401): no se bloquea la campana para siempre, se reintenta en el próximo ciclo
+                if (!res.ok) return;
 
                 const logs = (await res.json()).data || [];
-                notificaciones.ultimoId = Math.max(notificaciones.ultimoId, idMasReciente(logs));
+                const masRecienteServidor = idMasReciente(logs);
+                notificaciones.ultimoId = Math.max(notificaciones.ultimoId, masRecienteServidor);
 
                 let visto = ultimoLogVisto();
-                if (visto === null) {
-                    // Primera vez en este navegador: el historial existente no cuenta como nuevo
-                    guardarUltimoLogVisto(notificaciones.ultimoId);
-                    visto = notificaciones.ultimoId;
+                if (visto === null || Number(visto) > masRecienteServidor) {
+                    // Primera vez en este navegador: el historial existente no cuenta como nuevo.
+                    // Un valor guardado MAYOR que cualquier ID real (BD reiniciada / otro entorno en el
+                    // mismo dominio) congelaría el contador en 0: se recalibra con el ID actual.
+                    notificaciones.ultimoId = masRecienteServidor;
+                    guardarUltimoLogVisto(masRecienteServidor);
+                    visto = masRecienteServidor;
                 }
-                pintarContador(logs.filter(l => Number(l.id) > visto).length);
+                // Comparación numérica: "10" > "9" como texto sería falso
+                pintarContador(logs.filter(l => Number(l.id) > Number(visto)).length);
             } catch (err) {
                 console.warn('No se pudo consultar la actividad reciente:', err);
             } finally {
@@ -1628,6 +1636,10 @@
             if (notificaciones.ultimoId > (ultimoLogVisto() ?? 0)) guardarUltimoLogVisto(notificaciones.ultimoId);
             pintarContador(0);
         }
+
+        // API pública para dashboard-sync.js (ciclo de 10 s)
+        window.actualizarContadorNotificaciones = actualizarNotificaciones;
+        window.marcarNotificacionesVistas = marcarNotificacionesVistas;
 
 
         /* -------------------------- Gestión de usuarios (admin) -------------------------- */
