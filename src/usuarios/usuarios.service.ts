@@ -13,6 +13,7 @@ import { LoginUsuarioDto } from './login-usuario.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
+import { join } from 'path';
 import { AuditService } from '../audit/audit.service';
 import {
   canonizarDepartamento,
@@ -25,6 +26,14 @@ function validarDepartamento(valor: string | undefined): Departamento {
   const departamento = canonizarDepartamento(valor);
   if (!departamento) throw new BadRequestException(MENSAJE_DEPARTAMENTO_INVALIDO);
   return departamento;
+}
+
+function escaparHtml(t: string): string {
+  return t
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 @Injectable()
@@ -206,46 +215,66 @@ export class UsuariosService {
     usuario.expiracionCodigo = expiracion;
     await this.usuarioRepository.save(usuario);
 
+    const fechaSolicitud = new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      dateStyle: 'long',
+      timeStyle: 'short',
+    }).format(new Date());
+    const nombre = escaparHtml(usuario.nombre || 'Usuario');
+    const correoSeguro = escaparHtml(correo);
+
     await this.mailerService.sendMail({
       to: correo,
       subject: `${codigo} es tu código de verificación | Activa Uniformes`,
+      attachments: [
+        {
+          filename: 'logo-activa.png',
+          path: join(process.cwd(), 'public', 'favicon.png'),
+          cid: 'logo-activa',
+        },
+      ],
       html: `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e6e3e2; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-          
-          <!-- Cabecera de marca -->
-          <div style="background-color: #121212; padding: 1.8rem; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 1.5rem; letter-spacing: 1px;">
-              <strong>ACTIVA</strong> <span style="color: #c8102e;">UNIFORMES</span>
-            </h1>
-            <p style="color: #a0a0a0; margin: 0.3rem 0 0 0; font-size: 0.85rem;">Portal de Gestión Documental</p>
-          </div>
-
-          <!-- Cuerpo del mensaje -->
-          <div style="padding: 2rem; color: #333333; line-height: 1.6;">
-            <h2 style="color: #121212; font-size: 1.2rem; margin-top: 0;">Restablecimiento de Contraseña</h2>
-            <p style="font-size: 0.95rem; color: #555555;">
-              Hola <strong>${usuario.nombre || 'Usuario'}</strong>, recibimos una solicitud para cambiar la clave de acceso a tu cuenta corporativa.
-            </p>
-
-            <p style="font-size: 0.9rem; color: #555555; margin-bottom: 0.5rem;">Usa el siguiente código de verificación:</p>
-            
-            <!-- Recuadro del código OTP -->
-            <div style="background-color: #f8f9fa; border: 2px dashed #c8102e; border-radius: 8px; padding: 1rem; text-align: center; margin: 1.5rem 0;">
-              <span style="font-size: 2.2rem; font-weight: 800; letter-spacing: 8px; color: #c8102e; display: inline-block;">${codigo}</span>
-            </div>
-
-            <p style="font-size: 0.85rem; color: #777777; margin-bottom: 1.5rem;">
-              ⏳ Este código es válido durante <strong>15 minutos</strong>. Si no solicitaste este cambio, puedes ignorar este mensaje de forma segura.
-            </p>
-
-            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 1.5rem 0;" />
-
-            <p style="font-size: 0.78rem; color: #999999; text-align: center; margin: 0;">
-              Por seguridad, nunca compartas este código con nadie.<br>
-              © ${new Date().getFullYear()} Activa Uniformes S.A.S.
-            </p>
-          </div>
-        </div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;">
+  <tr><td align="center" style="padding:24px 12px;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;">
+      <tr><td align="center" style="background-color:#0c0c0c;border-bottom:3px solid #c8102e;padding:28px 24px;">
+        <img src="cid:logo-activa" alt="Activa Uniformes" width="56" height="56" style="display:block;margin:0 auto 12px auto;border:0;">
+        <div style="color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:2px;">ACTIVA UNIFORMES</div>
+        <div style="color:#a0a0a0;font-size:11px;letter-spacing:2px;margin-top:6px;">SISTEMA DE GESTIÓN DOCUMENTAL</div>
+      </td></tr>
+      <tr><td style="padding:32px 32px 8px 32px;color:#333333;font-size:15px;line-height:1.6;">
+        <p style="margin:0 0 16px 0;font-size:16px;color:#0c0c0c;">Estimado(a) <strong>${nombre}</strong>,</p>
+        <p style="margin:0;color:#555555;">Se ha generado una solicitud de validación de identidad para el restablecimiento de las credenciales de acceso a su cuenta. Para continuar, ingrese el siguiente código en la plataforma:</p>
+      </td></tr>
+      <tr><td style="padding:20px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8f9fa;border:1px solid #e5e7eb;border-top:3px solid #c8102e;">
+          <tr><td align="center" style="padding:20px 12px;">
+            <div style="font-size:11px;font-weight:bold;letter-spacing:2px;color:#6b7280;margin-bottom:12px;">CÓDIGO DE VERIFICACIÓN DE UN SOLO USO</div>
+            <div style="font-family:'Courier New',Courier,monospace;font-size:30px;font-weight:bold;letter-spacing:8px;color:#0c0c0c;">${codigo}</div>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:0 32px 20px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;font-size:13px;">
+          <tr><td colspan="2" style="background-color:#f8f9fa;padding:10px 14px;font-weight:bold;color:#0c0c0c;border-bottom:1px solid #e5e7eb;">Detalles de la solicitud</td></tr>
+          <tr><td style="padding:10px 14px;color:#6b7280;border-bottom:1px solid #e5e7eb;width:40%;">Usuario / Cuenta</td><td style="padding:10px 14px;color:#0c0c0c;border-bottom:1px solid #e5e7eb;">${correoSeguro}</td></tr>
+          <tr><td style="padding:10px 14px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Fecha y hora de solicitud</td><td style="padding:10px 14px;color:#0c0c0c;border-bottom:1px solid #e5e7eb;">${fechaSolicitud} (hora de Colombia)</td></tr>
+          <tr><td style="padding:10px 14px;color:#6b7280;">Tiempo de expiración</td><td style="padding:10px 14px;color:#0c0c0c;">15 minutos</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:0 32px 28px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-left:3px solid #c8102e;background-color:#fdf2f4;">
+          <tr><td style="padding:12px 16px;font-size:13px;line-height:1.6;color:#555555;">
+            <strong style="color:#0c0c0c;">Aviso de seguridad.</strong> Si usted no inició este proceso, ignore este mensaje y notifique al administrador del sistema; su contraseña actual permanecerá sin cambios. Por su seguridad, no comparta este código con ninguna persona.
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td align="center" style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:16px 24px;font-size:11px;color:#9ca3af;line-height:1.6;">
+        © ${new Date().getFullYear()} Activa Uniformes S.A.S. · Todos los derechos reservados · Mensaje automático, por favor no responder
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
       `,
     });
 
