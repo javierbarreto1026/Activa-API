@@ -13,11 +13,13 @@ import { Request as ExpressRequest } from 'express';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './create-usuario.dto';
 import { LoginUsuarioDto } from './login-usuario.dto';
+import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
 import { ROLES_ADMIN, type UsuarioSesion } from '../auth/usuario-sesion';
+import { validarDto } from '../common/validacion';
 
 interface AuthenticatedRequest extends ExpressRequest {
   user: {
@@ -113,11 +115,11 @@ export class UsuariosController {
 
   // 2. Endpoint para verificar el código y cambiar la clave
   @Post('restablecer-contrasena')
-  async restablecerContrasena(
-    @Body('correo') correo: string,
-    @Body('codigo') codigo: string,
-    @Body('nuevaContrasena') nuevaContrasena: string,
-  ) {
-    return await this.usuariosService.restablecerContrasena(correo, codigo, nuevaContrasena);
+  async restablecerContrasena(@Body(validarDto) dto: RestablecerContrasenaDto) {
+    return await this.usuariosService.restablecerContrasena(
+      dto.correo,
+      dto.codigo,
+      dto.nuevaContrasena,
+    );
   }
 }

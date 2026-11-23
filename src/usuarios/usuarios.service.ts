@@ -20,6 +20,13 @@ import {
   MENSAJE_DEPARTAMENTO_INVALIDO,
   type Departamento,
 } from '../common/departamentos';
+import {
+  contieneDatosPersonales,
+  MENSAJE_CLAVE_CON_DATOS_PERSONALES,
+  MENSAJE_CLAVE_IGUAL,
+  validarComplejidadContrasena,
+  validarRequisitosRestablecimiento,
+} from './politica-contrasena';
 
 /** Solo se crean cuentas en las áreas oficiales (se guarda el nombre exacto: "SST", no "sst"). */
 function validarDepartamento(valor: string | undefined): Departamento {
@@ -35,6 +42,15 @@ function escaparHtml(t: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+/**
+ * Texto que las bandejas de entrada muestran junto al asunto. El relleno invisible ocupa el
+ * resto de la vista previa para que no se cuele el cuerpo del correo (y con él, el código).
+ */
+const PREHEADER_RESTABLECIMIENTO =
+  'Has solicitado restablecer tu contraseña en el Portal de Gestión Documental. ' +
+  'Abre este mensaje para consultar tu código de verificación.' +
+  '&zwnj;&nbsp;'.repeat(150);
 
 @Injectable()
 export class UsuariosService {
@@ -225,7 +241,7 @@ export class UsuariosService {
 
     await this.mailerService.sendMail({
       to: correo,
-      subject: `${codigo} es tu código de verificación | Activa Uniformes`,
+      subject: 'Solicitud de restablecimiento de contraseña | Activa Uniformes',
       attachments: [
         {
           filename: 'logo-activa.png',
@@ -233,7 +249,14 @@ export class UsuariosService {
           cid: 'logo-activa',
         },
       ],
-      html: `
+      html: `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;">
+<div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">${PREHEADER_RESTABLECIMIENTO}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;">
   <tr><td align="center" style="padding:24px 12px;">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;">
@@ -275,15 +298,16 @@ export class UsuariosService {
     </table>
   </td></tr>
 </table>
-      `,
+</body>
+</html>`,
     });
 
     return { message: 'Código enviado con éxito.' };
   }
 
   async restablecerContrasena(correo: string, codigo: string, nuevaContrasena: string) {
-    // 1. Validar complejidad de contraseña
-    const validacion = validarComplejidadContrasena(nuevaContrasena);
+    // 1. Requisitos mínimos de la contraseña
+    const validacion = validarRequisitosRestablecimiento(nuevaContrasena);
     if (!validacion.valida) {
       throw new BadRequestException(validacion.mensaje);
     }
@@ -302,6 +326,19 @@ export class UsuariosService {
       throw new BadRequestException('El código ha expirado. Solicita uno nuevo.');
     }
 
+    // 2. Reglas que dependen de la cuenta. Van después de validar el código: antes, cualquiera
+    // podría usar el mensaje "igual a la anterior" para adivinar la contraseña de otra persona.
+    if (
+      (await bcrypt.compare(nuevaContrasena, usuario.contrasena)) ||
+      (await bcrypt.compare(nuevaContrasena.trim(), usuario.contrasena))
+    ) {
+      throw new BadRequestException(MENSAJE_CLAVE_IGUAL);
+    }
+
+    if (contieneDatosPersonales(nuevaContrasena, usuario.correo, usuario.nombre)) {
+      throw new BadRequestException(MENSAJE_CLAVE_CON_DATOS_PERSONALES);
+    }
+
     const salt = await bcrypt.genSalt(10);
     usuario.contrasena = await bcrypt.hash(nuevaContrasena, salt);
 
@@ -312,21 +349,4 @@ export class UsuariosService {
 
     return { message: 'Contraseña actualizada correctamente.' };
   }
-}
-
-// Función Helper ubicada fuera de la clase
-function validarComplejidadContrasena(clave: string): { valida: boolean; mensaje?: string } {
-  if (!clave || clave.length < 8) {
-    return { valida: false, mensaje: 'La contraseña debe tener al menos 8 caracteres.' };
-  }
-  if (!/[A-Z]/.test(clave)) {
-    return { valida: false, mensaje: 'La contraseña debe contener al menos una letra mayúscula.' };
-  }
-  if (!/[a-z]/.test(clave)) {
-    return { valida: false, mensaje: 'La contraseña debe contener al menos una letra minúscula.' };
-  }
-  if (!/\d/.test(clave)) {
-    return { valida: false, mensaje: 'La contraseña debe contener al menos un número.' };
-  }
-  return { valida: true };
 }
