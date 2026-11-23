@@ -241,7 +241,8 @@ button { cursor: pointer; }
     gap: 1rem; flex-wrap: wrap; padding: .9rem 1.25rem; background: var(--surface-alt);
     border-bottom: 1px solid var(--line);
 }
-.filters { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+.filters { display: flex; align-items: center; gap: .55rem .9rem; flex-wrap: wrap; min-width: 0; }
+.filters-group { display: flex; align-items: center; gap: .55rem; min-width: 0; }
 .filters-label { font-size: .85rem; font-weight: 700; color: var(--muted); }
 .filters-sep { color: var(--muted); font-size: .85rem; font-weight: 600; }
 
@@ -260,11 +261,22 @@ select {
 }
 select:disabled { background-color: #f1f1f1; color: var(--muted); cursor: not-allowed; }
 
-.filters input[type="date"] { padding: .45rem .65rem; font-size: .85rem; }
+/* Barra de filtros: fechas, tipo de archivo y buscador con la misma altura y letra.
+   Fondo, borde, radio y :focus vienen de las reglas de "Campos de formulario". */
+.toolbar input, .filtro-select, .filters .btn-ghost { height: 2.4rem; font-size: .85rem; }
+.filters input[type="date"] { padding: 0 .65rem; }
+.filtro-select {
+    padding: 0 2.2rem 0 .65rem; min-width: 0; max-width: 100%;
+    text-overflow: ellipsis; cursor: pointer;
+}
+.filters .btn-ghost { padding: 0 .8rem; white-space: nowrap; }
 
 .search { position: relative; }
 .search svg { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .search input { width: 290px; max-width: 100%; padding-left: 2.3rem; }
+/* En la barra de filtros el buscador cede ancho para no saltar a otra fila */
+.toolbar .search { flex: 1 1 180px; max-width: 290px; }
+.toolbar .search input { width: 100%; padding-top: 0; padding-bottom: 0; }
 
 /* ================= TABLA ================= */
 
@@ -673,6 +685,14 @@ tr.is-updated td { animation: fila-actualizada 1.8s ease-out; }
     .file-meta .meta-area { display: none; }    /* "Área" todavía sí */
 }
 
+/* Barra de filtros sin espacio para una sola fila: cada control fluye a la siguiente
+   y el buscador ocupa lo que sobre en la suya. */
+@media (max-width: 1180px) {
+    .toolbar { justify-content: flex-start; gap: .75rem .9rem; }
+    .filters { display: contents; }
+    .toolbar .search { max-width: none; }
+}
+
 @media (max-width: 720px) {
     .navbar { padding: 0 1rem; height: 60px; }
     .nav-links, .user-info { display: none; }
@@ -684,6 +704,12 @@ tr.is-updated td { animation: fila-actualizada 1.8s ease-out; }
     .summary-icon { display: none; }
     .search, .search input { width: 100%; }
     .toolbar { align-items: stretch; }
+    /* Fechas, tipo y buscador apilados, cada uno a todo el ancho */
+    .filters-group, .toolbar .search { flex: 1 1 100%; }
+    .filters-group { flex-wrap: wrap; }
+    .filters-group .filters-label { flex-basis: 100%; }
+    .filters-group input[type="date"], .filtro-select { flex: 1 1 0; min-width: 0; }
+    .filters .btn-ghost { width: 100%; }
     .col-hide-sm { display: none; }
     .file-meta .meta-area { display: inline-flex; } /* "Área" también se oculta */
     th, td { padding-left: .9rem; padding-right: .9rem; }

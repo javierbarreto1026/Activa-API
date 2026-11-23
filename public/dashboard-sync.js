@@ -3,8 +3,8 @@
 
    Cada 10 s vuelve a consultar documentos, carpetas y (administradores) la
    campana de auditoría, y repinta solo si algo cambió. No toca el estado de
-   navegación del usuario (área, carpeta abierta, búsqueda, fechas, orden,
-   página) ni los modales abiertos, y no muestra esqueletos de carga.
+   navegación del usuario (área, carpeta abierta, búsqueda, fechas, tipo de
+   archivo, orden, página) ni los modales abiertos, y no muestra esqueletos de carga.
 
    Depende de lo que define el <script> principal de dashboard.html (que se
    carga antes): estado, render, normalizarDoc, normalizarCarpeta, carpetaPorId,
@@ -95,7 +95,7 @@ async function sincronizarDocumentos() {
         if (estado.carpeta !== null && !carpetaPorId(estado.carpeta)) estado.carpeta = null;
 
         const foco = capturarFoco();
-        render(); // conserva área, búsqueda, fechas y página (solo la ajusta si ya no existe)
+        render(); // conserva área, búsqueda, fechas, tipo y página (solo la ajusta si ya no existe)
         restaurarFoco(foco);
     } catch (err) {
         console.warn('Sincronización automática fallida (se reintentará):', err);

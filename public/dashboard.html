@@ -124,12 +124,24 @@
 
             <div class="toolbar">
                 <div class="filters">
-                    <span class="filters-label">Fecha del documento</span>
-                    <label for="filtroDesde" class="sr-only">Desde</label>
-                    <input type="date" id="filtroDesde" title="Fecha desde">
-                    <span class="filters-sep">a</span>
-                    <label for="filtroHasta" class="sr-only">Hasta</label>
-                    <input type="date" id="filtroHasta" title="Fecha hasta">
+                    <div class="filters-group">
+                        <span class="filters-label">Fecha del documento</span>
+                        <label for="filtroDesde" class="sr-only">Desde</label>
+                        <input type="date" id="filtroDesde" title="Fecha desde">
+                        <span class="filters-sep">a</span>
+                        <label for="filtroHasta" class="sr-only">Hasta</label>
+                        <input type="date" id="filtroHasta" title="Fecha hasta">
+                    </div>
+                    <div class="filters-group">
+                        <label class="filters-label" for="filtroTipoArchivo">Tipo</label>
+                        <select id="filtroTipoArchivo" class="filtro-select" title="Tipo de archivo">
+                            <option value="todos" selected>Todos los tipos</option>
+                            <option value="pdf">PDF (.pdf)</option>
+                            <option value="word">Word (.doc, .docx)</option>
+                            <option value="excel">Excel (.xls, .xlsx)</option>
+                            <option value="powerpoint">PowerPoint (.ppt, .pptx)</option>
+                        </select>
+                    </div>
                     <button type="button" class="btn-ghost" id="btnLimpiar" hidden>Quitar filtros</button>
                 </div>
 
@@ -527,7 +539,7 @@
         }
 
         const estado = {
-            docs: [], carpetas: [], area: 'Todos', carpeta: null, q: '', desde: '', hasta: '',
+            docs: [], carpetas: [], area: 'Todos', carpeta: null, q: '', desde: '', hasta: '', tipo: 'todos',
             orden: 'fecha', dir: 'desc', pagina: 1, cargando: true, error: false
         };
 
@@ -804,9 +816,10 @@
         function prepararFiltros() {
             $('filtroDesde').value = estado.desde;
             $('filtroHasta').value = estado.hasta;
+            $('filtroTipoArchivo').value = estado.tipo;
         }
 
-        const filtrosActivos = () => !!(norm(estado.q).trim() || estado.desde || estado.hasta);
+        const filtrosActivos = () => !!(norm(estado.q).trim() || estado.desde || estado.hasta || estado.tipo !== 'todos');
 
         function filtrados() {
             const q = norm(estado.q).trim();
@@ -815,8 +828,8 @@
             const dDesde = estado.desde ? new Date(estado.desde + 'T00:00:00') : null;
             const dHasta = estado.hasta ? new Date(estado.hasta + 'T23:59:59') : null;
 
-            // Dentro de un área: sin filtros se ve solo el nivel actual; con búsqueda o
-            // fechas se busca también en todas las subcarpetas de la carpeta abierta.
+            // Dentro de un área: sin filtros se ve solo el nivel actual; con búsqueda, fechas
+            // o tipo se busca también en todas las subcarpetas de la carpeta abierta.
             const enArea = estado.area !== 'Todos';
             const conFiltros = filtrosActivos();
             const alcance = enArea && conFiltros && estado.carpeta !== null ? descendientes(estado.carpeta) : null;
@@ -833,6 +846,9 @@
                 if (dDesde && (!d.fecha || d.fecha < dDesde)) return false;
                 if (dHasta && (!d.fecha || d.fecha > dHasta)) return false;
 
+                // Filtro por tipo de archivo (dashboard-filtro-tipo.js)
+                if (!coincideTipoArchivo(d.nombre, estado.tipo)) return false;
+
                 return true;
             });
 
@@ -844,9 +860,9 @@
             return lista;
         }
 
-        /** Subcarpetas del nivel actual (las carpetas no tienen fecha: se ocultan al filtrar por fechas). */
+        /** Subcarpetas del nivel actual (no tienen fecha ni tipo: se ocultan al filtrar por fechas o por tipo). */
         function carpetasVisibles() {
-            if (estado.area === 'Todos' || estado.desde || estado.hasta) return [];
+            if (estado.area === 'Todos' || estado.desde || estado.hasta || estado.tipo !== 'todos') return [];
             const q = norm(estado.q).trim();
             return subcarpetas(estado.carpeta, estado.area).filter(c => !q || norm(c.nombre).includes(q));
         }
@@ -950,7 +966,7 @@
             pintarExplorador();
             pintarEncabezadosOrden();
             pintarResumen();
-            $('btnLimpiar').hidden = !(estado.q || estado.desde || estado.hasta);
+            $('btnLimpiar').hidden = !(estado.q || estado.desde || estado.hasta || estado.tipo !== 'todos');
 
 
             if (estado.cargando) {
@@ -982,7 +998,9 @@
             if (!visibles.length) {
                 tbody.innerHTML = '';
                 const enArea = estado.area !== 'Todos';
-                if (filtrosActivos()) {
+                if (estado.tipo !== 'todos') {
+                    pintarEstado(`<div class="state">${ICONO_VACIO}<h3>${esc(mensajeSinDocumentosDeTipo(estado.tipo))}</h3><p>Prueba con otro tipo de archivo, otra área o quita los filtros.</p></div>`);
+                } else if (filtrosActivos()) {
                     pintarEstado(`<div class="state">${ICONO_VACIO}<h3>No encontramos documentos</h3><p>Prueba con otro nombre, otra área o quita los filtros de fecha.</p></div>`);
                 } else if (carpetasVisibles().length) {
                     pintarEstado('<div class="state state-sm"><p>No hay archivos sueltos en este nivel. Abre una carpeta o sube un archivo aquí.</p></div>');
@@ -1930,8 +1948,9 @@
             $('filtroHasta').addEventListener('change', aplicarRangoFechas);
 
             $('btnLimpiar').addEventListener('click', () => {
-                estado.q = ''; estado.desde = ''; estado.hasta = ''; estado.pagina = 1;
+                estado.q = ''; estado.desde = ''; estado.hasta = ''; estado.tipo = 'todos'; estado.pagina = 1;
                 $('buscador').value = '';
+                $('filtroTipoArchivo').value = 'todos';
                 $('filtroDesde').value = ''; $('filtroHasta').value = '';
                 $('filtroDesde').max = ''; $('filtroHasta').min = '';
                 render();
@@ -2483,6 +2502,7 @@
         // El interruptor vuelve a "Modo documento" con el reset() del formulario al abrirlo.
         modal.addEventListener('close', limpiarEscaneo);
     </script>
+    <script src="dashboard-filtro-tipo.js"></script>
     <script src="dashboard-sync.js"></script>
     <script src="dashboard-visor.js"></script>
 </body>
