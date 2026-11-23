@@ -10,6 +10,7 @@
     --red: #C8102E;
     --red-deep: #9e0c24;
     --red-soft: #fdecef;
+    --green: #16a34a;
 
     --page: #f4f4f4;
     --text: #151515;
@@ -26,6 +27,10 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+}
+
+[hidden] {
+    display: none !important;
 }
 
 html, body {
@@ -324,6 +329,11 @@ body {
     box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
+.form-group input.is-invalid,
+.form-group input.is-invalid:hover {
+    border-color: var(--red);
+}
+
 .form-group input.otp-input {
     padding-left: 1rem;
     letter-spacing: 0.5em;
@@ -372,6 +382,64 @@ body {
     display: block;
 }
 
+.field-msg {
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--red);
+}
+
+.field-msg--ok {
+    color: var(--green);
+}
+
+/* ---------- Requisitos de la nueva contraseña ---------- */
+
+.requisitos {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.requisitos__titulo {
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.requisitos__lista {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 12px;
+    list-style: none;
+}
+
+.requisitos__lista li {
+    display: flex;
+    gap: 6px;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.requisitos__lista li::before {
+    content: "•";
+    flex: 0 0 12px;
+    text-align: center;
+}
+
+.requisitos__lista li.is-ok {
+    color: var(--green);
+    font-weight: 600;
+}
+
+.requisitos__lista li.is-ok::before {
+    content: "✓";
+    font-weight: 800;
+}
+
 /* ---------- Botones ---------- */
 
 .btn-primary {
@@ -407,6 +475,15 @@ body {
 .btn-primary:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+.btn-primary:disabled:not(.is-loading) {
+    opacity: 0.45;
+}
+
+.btn-primary:disabled:hover {
+    background: var(--black);
+    border-bottom-color: var(--red);
 }
 
 .btn-primary.is-loading::after {
@@ -456,9 +533,187 @@ body {
     text-align: center;
 }
 
+/* ---------- Restablecer contraseña: versión compacta ----------
+   La tarjeta es la misma del login: estos ajustes solo valen mientras se ve #resetPanel. */
+
+#resetPanel .panel-heading {
+    margin-bottom: 16px;
+}
+
+#resetPanel .notice {
+    margin-bottom: 14px;
+    padding: 9px 14px;
+    font-size: 13px;
+}
+
+#resetPanel .form-group {
+    margin-bottom: 12px;
+}
+
+#resetPanel .form-group label {
+    margin-bottom: 5px;
+}
+
+/* Solo el eje vertical: a los lados van el candado y el botón de ojo. */
+#resetPanel .form-group input {
+    height: 42px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+#resetPanel .field-msg {
+    margin-top: 5px;
+}
+
+#resetPanel .btn-primary {
+    margin-top: 4px;
+    padding: 12px;
+}
+
+#resetPanel .btn-link {
+    margin-top: 16px;
+}
+
+/* ---------- Tarjetas amplias: "Iniciar sesión" y "Enviar código" ----------
+   La tarjeta, el encabezado y el enlace son los mismos en la vista del código: estas reglas
+   exigen que se vea #loginPanel o #formPaso1, así que no aplican cuando se ve #formPaso2. */
+
+.auth-card:has(#loginPanel:not([hidden])) {
+    width: 100%;
+    max-width: 465px;
+    padding: 44px 40px;
+}
+
+.auth-card:has(#resetPanel:not([hidden]) #formPaso1:not([hidden])) {
+    width: 100%;
+    max-width: 465px;
+    padding: 40px 40px;
+}
+
+#loginPanel .panel-heading,
+#resetPanel:has(#formPaso1:not([hidden])) .panel-heading {
+    margin-bottom: 24px;
+}
+
+#loginPanel .panel-heading h2,
+#resetPanel:has(#formPaso1:not([hidden])) .panel-heading h2 {
+    font-size: 27px;
+}
+
+#loginPanel .panel-heading p,
+#resetPanel:has(#formPaso1:not([hidden])) .panel-heading p {
+    font-size: 14.5px;
+}
+
+#loginForm .form-group,
+#formPaso1 .form-group {
+    margin-bottom: 20px;
+}
+
+/* Solo el eje vertical: a los lados van los íconos y el botón de ojo. */
+#loginForm .form-group input,
+#formPaso1 .form-group input {
+    height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 15px;
+}
+
+#loginForm .btn-primary,
+#formPaso1 .btn-primary {
+    height: 48px;
+    margin-top: 8px;
+    padding: 0 16px;
+    font-size: 15px;
+}
+
+#resetPanel:has(#formPaso1:not([hidden])) .btn-link {
+    margin-top: 24px;
+}
+
+@media (min-width: 768px) {
+    .auth-card:has(#loginPanel:not([hidden])) {
+        max-width: 540px;
+        padding: 52px 48px;
+    }
+
+    .auth-card:has(#resetPanel:not([hidden]) #formPaso1:not([hidden])) {
+        max-width: 540px;
+        padding: 48px 48px;
+    }
+
+    #loginPanel .panel-heading,
+    #resetPanel:has(#formPaso1:not([hidden])) .panel-heading {
+        margin-bottom: 28px;
+    }
+
+    #loginPanel .panel-heading h2,
+    #resetPanel:has(#formPaso1:not([hidden])) .panel-heading h2 {
+        font-size: 30px;
+        margin-bottom: 10px;
+    }
+
+    #loginPanel .panel-heading p,
+    #resetPanel:has(#formPaso1:not([hidden])) .panel-heading p {
+        font-size: 15.5px;
+    }
+
+    #loginForm .form-group,
+    #formPaso1 .form-group {
+        margin-bottom: 22px;
+    }
+
+    #loginForm .form-group label,
+    #formPaso1 .form-group label {
+        font-size: 14.5px;
+        margin-bottom: 8px;
+    }
+
+    #loginForm .form-group input,
+    #formPaso1 .form-group input,
+    #loginForm .btn-primary,
+    #formPaso1 .btn-primary {
+        height: 52px;
+        font-size: 15.5px;
+    }
+}
+
+@media (max-width: 599px) {
+    .auth-card:has(#loginPanel:not([hidden])),
+    .auth-card:has(#resetPanel:not([hidden]) #formPaso1:not([hidden])) {
+        max-width: 100%;
+        padding: 32px 24px;
+    }
+
+    #loginPanel .panel-heading h2,
+    #resetPanel:has(#formPaso1:not([hidden])) .panel-heading h2 {
+        font-size: 23px;
+    }
+}
+
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
+
+@media (min-width: 480px) {
+    .auth-card:has(#resetPanel:not([hidden])) {
+        max-width: 480px;
+        padding: 28px 34px;
+    }
+}
+
+@media (min-width: 1440px) {
+    .auth-card:has(#resetPanel:not([hidden])) {
+        max-width: 500px;
+    }
+}
+
+@media (max-width: 479px) {
+    .requisitos__lista {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
 
 @media (max-width: 960px) {
     .screen {

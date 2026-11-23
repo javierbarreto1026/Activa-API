@@ -61,7 +61,7 @@
 
                     <div id="avisoLogin" class="notice" role="alert" aria-live="polite"></div>
 
-                    <form id="loginForm" onsubmit="procesarLogin(event)">
+                    <form id="loginForm">
                         <div class="form-group">
                             <label for="email">Correo corporativo</label>
                             <div class="input-wrap">
@@ -75,7 +75,7 @@
                             <div class="input-wrap">
                                 <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
                                 <input type="password" id="password" class="has-toggle" required placeholder="••••••••" autocomplete="current-password">
-                                <button type="button" class="toggle-pass" onclick="alternarClave('password', this)" aria-label="Mostrar contraseña">
+                                <button type="button" class="toggle-pass" data-input="password" aria-label="Mostrar contraseña">
                                     <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                                     <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.4 6.4A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
                                 </button>
@@ -85,11 +85,11 @@
                         <button type="submit" id="btnSubmit" class="btn-primary">Iniciar sesión</button>
                     </form>
 
-                    <button type="button" class="btn-link" onclick="toggleForms()">¿Necesitas actualizar tu contraseña?</button>
+                    <button type="button" class="btn-link">¿Necesitas actualizar tu contraseña?</button>
                 </div>
 
                 <!-- ----- Restablecimiento por código ----- -->
-                <div id="resetPanel" style="display: none;">
+                <div id="resetPanel" hidden>
                     <div class="panel-heading">
                         <h2>Restablecer contraseña</h2>
                         <p id="resetSubtitulo">Ingresa tu correo para recibir un código de verificación</p>
@@ -98,7 +98,7 @@
                     <div id="avisoReset" class="notice" role="alert" aria-live="polite"></div>
 
                     <!-- Paso 1: Pedir el Correo -->
-                    <form id="formPaso1" onsubmit="solicitarCodigo(event)">
+                    <form id="formPaso1">
                         <div class="form-group">
                             <label for="resetEmail">Correo corporativo</label>
                             <div class="input-wrap">
@@ -111,7 +111,7 @@
                     </form>
 
                     <!-- Paso 2: Digitar Código OTP y Nueva Contraseña -->
-                    <form id="formPaso2" onsubmit="confirmarCambio(event)" style="display: none;">
+                    <form id="formPaso2" hidden>
                         <div class="form-group">
                             <label for="codigoOTP">Código de verificación (6 dígitos)</label>
                             <div class="input-wrap">
@@ -123,18 +123,43 @@
                             <label for="nuevaClave">Nueva contraseña</label>
                             <div class="input-wrap">
                                 <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-                                <input type="password" id="nuevaClave" class="has-toggle" required placeholder="••••••••" autocomplete="new-password">
-                                <button type="button" class="toggle-pass" onclick="alternarClave('nuevaClave', this)" aria-label="Mostrar contraseña">
+                                <input type="password" id="nuevaClave" class="has-toggle" required placeholder="••••••••" autocomplete="new-password" aria-describedby="listaRequisitosClave">
+                                <button type="button" class="toggle-pass" data-input="nuevaClave" aria-label="Mostrar contraseña">
                                     <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                                     <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.4 6.4A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
                                 </button>
                             </div>
                         </div>
 
-                        <button type="submit" id="btnCambiarClave" class="btn-primary">Actualizar clave</button>
+                        <div class="form-group">
+                            <label for="confirmarContrasena">Repetir nueva contraseña</label>
+                            <div class="input-wrap">
+                                <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                                <input type="password" id="confirmarContrasena" class="has-toggle" required placeholder="••••••••" autocomplete="new-password" aria-describedby="mensajeCoincidencia">
+                                <button type="button" class="toggle-pass" data-input="confirmarContrasena" aria-label="Mostrar contraseña">
+                                    <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.4 6.4A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                </button>
+                            </div>
+                            <p id="mensajeCoincidencia" class="field-msg" aria-live="polite" hidden></p>
+                        </div>
+
+                        <div id="listaRequisitosClave" class="requisitos">
+                            <p class="requisitos__titulo">Tu contraseña debe cumplir:</p>
+                            <ul class="requisitos__lista">
+                                <li data-regla="longitud">Mínimo 8 caracteres</li>
+                                <li data-regla="mayuscula">Una mayúscula (A-Z)</li>
+                                <li data-regla="minuscula">Una minúscula (a-z)</li>
+                                <li data-regla="numero">Un número (0-9)</li>
+                                <li data-regla="especial">Carácter especial (!@#)</li>
+                                <li data-regla="correo">Sin similitud al correo</li>
+                            </ul>
+                        </div>
+
+                        <button type="submit" id="btnCambiarClave" class="btn-primary" disabled>Actualizar clave</button>
                     </form>
 
-                    <button type="button" class="btn-link" onclick="toggleForms()">Volver al inicio de sesión</button>
+                    <button type="button" class="btn-link">Volver al inicio de sesión</button>
                 </div>
 
             </div>
@@ -144,197 +169,6 @@
 
     </div>
 
-    <script>
-        const API_BASE = window.location.origin;
-
-        document.getElementById('anio').textContent = new Date().getFullYear();
-
-        // ---------- Utilidades de interfaz ----------
-
-        // Muestra un mensaje dentro de la tarjeta (reemplaza a alert). tipo: 'error' | 'ok'
-        function mostrarAviso(id, mensaje, tipo) {
-            const el = document.getElementById(id);
-            // Nest devuelve un arreglo de mensajes cuando falla la validación del DTO.
-            el.textContent = Array.isArray(mensaje) ? mensaje.join(' · ') : mensaje;
-            el.className = 'notice notice--' + (tipo || 'error') + ' is-visible';
-        }
-
-        function ocultarAvisos() {
-            ['avisoLogin', 'avisoReset'].forEach((id) => {
-                const el = document.getElementById(id);
-                el.textContent = '';
-                el.className = 'notice';
-            });
-        }
-
-        // Estado de carga de un botón (deshabilita y muestra el indicador giratorio)
-        function cargando(btn, texto) {
-            btn.disabled = true;
-            btn.classList.add('is-loading');
-            btn.textContent = texto;
-        }
-
-        function listo(btn, texto) {
-            btn.disabled = false;
-            btn.classList.remove('is-loading');
-            btn.textContent = texto;
-        }
-
-        // Mostrar / ocultar contraseña
-        function alternarClave(inputId, btn) {
-            const input = document.getElementById(inputId);
-            const visible = input.type === 'text';
-            input.type = visible ? 'password' : 'text';
-            btn.classList.toggle('is-showing', !visible);
-            btn.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
-        }
-
-        // Alternar vistas entre Login y Restablecimiento
-        function toggleForms() {
-            const loginPanel = document.getElementById('loginPanel');
-            const resetPanel = document.getElementById('resetPanel');
-            ocultarAvisos();
-
-            if (loginPanel.style.display === 'none') {
-                loginPanel.style.display = 'block';
-                resetPanel.style.display = 'none';
-            } else {
-                loginPanel.style.display = 'none';
-                resetPanel.style.display = 'block';
-
-                // Restablecer vista inicial de recuperación (Paso 1)
-                document.getElementById('formPaso1').style.display = 'block';
-                document.getElementById('formPaso2').style.display = 'none';
-                document.getElementById('resetSubtitulo').textContent = 'Ingresa tu correo para recibir un código de verificación';
-                document.getElementById('formPaso1').reset();
-                document.getElementById('formPaso2').reset();
-                listo(document.getElementById('btnEnviarCodigo'), 'Enviar código');
-                listo(document.getElementById('btnCambiarClave'), 'Actualizar clave');
-            }
-        }
-
-        // 1. LÓGICA DE INICIO DE SESIÓN
-        async function procesarLogin(event) {
-            event.preventDefault();
-            ocultarAvisos();
-
-            const correo = document.getElementById('email').value.trim();
-            const contrasena = document.getElementById('password').value;
-            const btn = document.getElementById('btnSubmit');
-
-            cargando(btn, 'Iniciando...');
-
-            try {
-                const res = await fetch(`${API_BASE}/usuarios/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ correo, contrasena })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    mostrarAviso('avisoLogin', data.message || 'Correo o contraseña incorrectos.', 'error');
-                    listo(btn, 'Iniciar sesión');
-                    return;
-                }
-
-                const token = data.token || data.access_token || data.accessToken || (data.usuario && data.usuario.token);
-                const usuario = data.usuario || data.user || { correo };
-
-                if (!token) {
-                    mostrarAviso('avisoLogin', 'El servidor no devolvió un token válido.', 'error');
-                    listo(btn, 'Iniciar sesión');
-                    return;
-                }
-
-                localStorage.setItem('token', token);
-                localStorage.setItem('usuarioActiva', JSON.stringify({ ...usuario, token }));
-                window.location.href = 'dashboard.html';
-
-            } catch (err) {
-                console.error('Error en login:', err);
-                mostrarAviso('avisoLogin', 'Error de conexión con el servidor. Revisa que NestJS esté encendido.', 'error');
-                listo(btn, 'Iniciar sesión');
-            }
-        }
-
-        // 2. RECUPERACIÓN - PASO 1: Enviar Código por Correo
-        async function solicitarCodigo(event) {
-            event.preventDefault();
-            ocultarAvisos();
-
-            const correo = document.getElementById('resetEmail').value.trim();
-            const btn = document.getElementById('btnEnviarCodigo');
-
-            cargando(btn, 'Enviando código...');
-
-            try {
-                const res = await fetch(`${API_BASE}/usuarios/solicitar-codigo`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ correo })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    mostrarAviso('avisoReset', data.message || 'No se encontró una cuenta asociada a este correo.', 'error');
-                    listo(btn, 'Enviar código');
-                    return;
-                }
-
-                // Transición al Paso 2
-                document.getElementById('formPaso1').style.display = 'none';
-                document.getElementById('formPaso2').style.display = 'block';
-                document.getElementById('resetSubtitulo').textContent = 'Ingresa el código enviado a ' + correo;
-                mostrarAviso('avisoReset', '¡Código enviado con éxito! Revisa tu bandeja de entrada.', 'ok');
-                document.getElementById('codigoOTP').focus();
-
-            } catch (err) {
-                console.error('Error al enviar código:', err);
-                mostrarAviso('avisoReset', 'Error de conexión con el servidor.', 'error');
-                listo(btn, 'Enviar código');
-            }
-        }
-
-        // 3. RECUPERACIÓN - PASO 2: Confirmar Código y Actualizar Clave
-        async function confirmarCambio(event) {
-            event.preventDefault();
-            ocultarAvisos();
-
-            const correo = document.getElementById('resetEmail').value.trim();
-            const codigo = document.getElementById('codigoOTP').value.trim();
-            const nuevaContrasena = document.getElementById('nuevaClave').value;
-            const btn = document.getElementById('btnCambiarClave');
-
-            cargando(btn, 'Actualizando clave...');
-
-            try {
-                const res = await fetch(`${API_BASE}/usuarios/restablecer-contrasena`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ correo, codigo, nuevaContrasena })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    mostrarAviso('avisoReset', data.message || 'El código ingresado es incorrecto o ya expiró.', 'error');
-                    listo(btn, 'Actualizar clave');
-                    return;
-                }
-
-                // Vuelve al login y confirma el cambio allí
-                toggleForms();
-                mostrarAviso('avisoLogin', '¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.', 'ok');
-
-            } catch (err) {
-                console.error('Error al cambiar contraseña:', err);
-                mostrarAviso('avisoReset', 'Error al intentar actualizar la contraseña.', 'error');
-                listo(btn, 'Actualizar clave');
-            }
-        }
-    </script>
+    <script src="login.js"></script>
 </body>
 </html>
